@@ -1,8 +1,11 @@
+# backend/app/database.py
 import os
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_URI = os.getenv("MONGODB_URI") or os.getenv("MONGODB_DB")  # compat
+if not MONGODB_URI:
+    raise RuntimeError("MONGODB_URI not set")
 DB_NAME = os.getenv("MONGODB_DB", "sabor_real")
 
 client: AsyncIOMotorClient | None = None
@@ -10,8 +13,18 @@ db = None
 
 async def connect():
     global client, db
-    client = AsyncIOMotorClient(MONGODB_URI)
-    db = client[DB_NAME]
+    client = AsyncIOMotorClient(
+        MONGODB_URI,
+        uuidRepresentation="standard",
+        serverSelectionTimeoutMS=20000,
+        connectTimeoutMS=20000,
+    )
+    try:
+        db = client.get_default_database()  
+    except Exception:
+        db = None
+    if db is None:
+        db = client[DB_NAME]
 
 async def disconnect():
     if client:
