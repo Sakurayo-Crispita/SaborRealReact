@@ -9,6 +9,7 @@ frontend/.DS_Store
 # --- Python / FastAPI ---
 backend/.venv/
 backend/__pycache__/
+.pytest_cache/
 backend/.pytest_cache/
 backend/.mypy_cache/
 backend/.coverage
