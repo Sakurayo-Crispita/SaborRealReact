@@ -46,6 +46,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     localStorage.removeItem('sr_token');
     localStorage.removeItem('sr_user');
+    localStorage.removeItem('sr_cart'); 
 
     // limpia también el carrito del usuario actual (si había)
     const email = JSON.parse(localStorage.getItem('sr_user') || 'null')?.email;
