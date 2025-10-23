@@ -1,3 +1,4 @@
+// src/ProductoCard.jsx
 import { useEffect, useState } from 'react';
 import { apix } from './api/api';
 import { useAuth } from './AuthContext.jsx';
@@ -25,10 +26,19 @@ export default function ProductoCard({ p }) {
 
   return (
     <article className="card">
-      <div className="img">
-        {p.imagenUrl
-          ? <img src={p.imagenUrl} alt={p.nombre} style={{maxHeight:'100%', maxWidth:'100%', objectFit:'cover'}}/>
-          : <span style={{color:'#999'}}>Sin imagen</span>}
+      {/* IMAGEN: contenedor con aspect-ratio + cover */}
+      <div className="thumb">
+        {p.imagenUrl ? (
+          <img
+            src={p.imagenUrl}
+            alt={p.nombre}
+            loading="lazy"
+            width="800"  // ayuda al CLS (no cambia el tamaño visual)
+            height="500"
+          />
+        ) : (
+          <span className="noimg">Sin imagen</span>
+        )}
       </div>
 
       <div style={{padding:'14px'}}>

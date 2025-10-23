@@ -56,6 +56,38 @@ input:focus, select:focus, textarea:focus{
   box-shadow: 0 0 0 3px rgba(96,165,250,.15);
 }
 
+/* Contenedor de imagen uniforme para todas las tarjetas */
+.thumb{
+  width: 100%;
+  aspect-ratio: 16 / 10;      /* todas con la misma proporción */
+  overflow: hidden;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: #0d111a;
+  display: grid;
+  place-items: center;
+}
+
+/* La imagen se recorta sin deformarse */
+.thumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;          /* recorta manteniendo proporción */
+  object-position: center;    /* encuadre centrado */
+  display: block;
+}
+
+/* Fallback cuando no hay imagen */
+.thumb .noimg{
+  color: #9aa0a6;
+  font-size: .9rem;
+}
+
+/* (Opcional) Ajusta la proporción en pantallas pequeñas */
+@media (max-width: 640px){
+  .thumb { aspect-ratio: 4 / 3; }
+}
+
+
 /* Card producto */
 .card{
   background: var(--panel);
