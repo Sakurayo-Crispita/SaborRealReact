@@ -2,24 +2,33 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 
 const AuthContext = createContext(null);
-
-// Cambia si tu backend corre en otro host/puerto
-const BASE_URL = 'http://127.0.0.1:8000';
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(null); 
+  const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [ready, setReady] = useState(false);
 
-  // Cargar sesión guardada
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('sr_token');
-      const savedUser = localStorage.getItem('sr_user');
-      if (saved) setToken(saved);
-      if (savedUser) setUser(JSON.parse(savedUser));
-    } catch {}
-    setReady(true);
+    (async () => {
+      try {
+        const saved = localStorage.getItem('sr_token');
+        if (saved) {
+          setToken(saved);
+          // validar token y traer user
+          const me = await fetch(`${BASE_URL}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${saved}` },
+          });
+          if (me.ok) {
+            setUser(await me.json());
+          } else {
+            // token inválido/expirado
+            localStorage.removeItem('sr_token');
+          }
+        }
+      } catch {}
+      setReady(true);
+    })();
   }, []);
 
   async function login(email, password) {
@@ -34,18 +43,21 @@ export function AuthProvider({ children }) {
       throw new Error(msg);
     }
 
-    // Backend devuelve: { access_token, token_type: "bearer" }
-    const data = await res.json();
-    const rawToken = data.access_token;
+    const { access_token } = await res.json();
+    setToken(access_token);
+    localStorage.setItem('sr_token', access_token);
 
-    setToken(rawToken);
-    localStorage.setItem('sr_token', rawToken);
-
-    // Si en tu backend el JWT incluye email/id y decides guardarlo:
-    // (totalmente opcional; puedes omitir user)
-    const u = data.user || null;
-    setUser(u);
-    if (u) localStorage.setItem('sr_user', JSON.stringify(u));
+    // pedir /me con el token nuevo
+    const me = await fetch(`${BASE_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${access_token}` },
+    });
+    if (me.ok) {
+      setUser(await me.json());
+      localStorage.setItem('sr_user', JSON.stringify(await me.clone().json()));
+    } else {
+      setUser(null);
+      localStorage.removeItem('sr_user');
+    }
   }
 
   function logout() {
@@ -55,16 +67,29 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('sr_user');
   }
 
+  // helper para fetch con auth y manejo 401
+  async function fetchWithAuth(path, init = {}) {
+    const headers = new Headers(init.headers || {});
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
+    if (res.status === 401) {
+      // token expirado → limpiar sesión
+      logout();
+    }
+    return res;
+  }
+
   const value = useMemo(
     () => ({
       token,
       user,
       isAuthenticated: Boolean(token),
-      // Úsalo así: headers: { Authorization: authHeader }
       authHeader: token ? `Bearer ${token}` : null,
       login,
       logout,
+      fetchWithAuth,
       ready,
+      BASE_URL,
     }),
     [token, user, ready]
   );

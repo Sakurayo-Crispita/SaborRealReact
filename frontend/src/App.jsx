@@ -1,7 +1,7 @@
 // src/App.jsx
 import { useEffect, useState } from 'react';
 import { api } from './api';
-import { AuthProvider, useAuth } from './AuthContext.jsx'; // ← un solo import
+import { useAuth } from './AuthContext.jsx'; // ✅ SOLO useAuth (no importes AuthProvider aquí)
 import Login from './Login';
 import ProductoCard from './ProductoCard';
 
@@ -9,7 +9,7 @@ function Catalogo() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categoria, setCategoria] = useState('');
-  const { isAuthenticated } = useAuth(); // úsalo o elimínalo si no lo necesitas
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     let alive = true;
@@ -27,7 +27,6 @@ function Catalogo() {
         <Login />
       </header>
 
-      {/* Aviso opcional: comenta o borra si no lo quieres */}
       {!isAuthenticated && (
         <small style={{color:'#aaa'}}>Inicia sesión para poder comentar productos.</small>
       )}
@@ -51,11 +50,7 @@ function Catalogo() {
       ) : items.length === 0 ? (
         <p>No hay productos para esta categoría.</p>
       ) : (
-        <div style={{
-          display:'grid',
-          gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))',
-          gap:'16px'
-        }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:'16px' }}>
           {items.map(p => <ProductoCard key={p._id} p={p} />)}
         </div>
       )}
@@ -64,9 +59,5 @@ function Catalogo() {
 }
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <Catalogo />
-    </AuthProvider>
-  );
+  return <Catalogo />;
 }

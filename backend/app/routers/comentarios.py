@@ -4,6 +4,7 @@ from bson import ObjectId
 from .. import database
 from ..schemas import ComentarioIn, ComentarioOut
 from .auth import get_current_user_id
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/api/comentarios", tags=["comentarios"])
 
@@ -32,7 +33,7 @@ async def crear(payload: ComentarioIn, user_id: str = Depends(get_current_user_i
         "usuario_id": user_id,
         "texto": payload.texto,
         "rating": payload.rating,
-        "creadoAt": datetime.utcnow(),
+        "creadoAt": datetime.now(timezone.utc),
     }
     res = await database.db.comentarios.insert_one(doc)
     creado = await database.db.comentarios.find_one({"_id": res.inserted_id})
