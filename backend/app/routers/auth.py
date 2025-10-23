@@ -53,7 +53,6 @@ async def get_current_user_id(
     try:
         data = jwt.decode(token, SECRET_KEY, algorithms=[ALGO])
     except Exception as e:
-        # 👇 Deja este print temporalmente para ver causa exacta en consola
         print("JWT decode error:", repr(e))
         raise HTTPException(status_code=401, detail="Token inválido")
 

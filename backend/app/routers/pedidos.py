@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from datetime import datetime, timezone
 from .. import database
 from ..schemas import PedidoIn, PedidoOut
-from .auth import get_current_user, get_current_user_id  # ya lo tienes
+from .auth import get_current_user, get_current_user_id 
 
 router = APIRouter(prefix="/api/pedidos", tags=["pedidos"])
 

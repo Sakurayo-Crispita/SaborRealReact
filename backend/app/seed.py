@@ -1,7 +1,6 @@
 # backend/app/seed.py
 from .security import hash_password  
 
-# Usaremos rutas públicas del frontend (Netlify sirve /public como raíz)
 IMAGES = {
     "Pan Francés": "/img/panfrance.jpg",
     "Croissant": "/img/croissant.jpg",
@@ -40,13 +39,11 @@ async def seed(db):
     ]
 
     for p in prods:
-        # Inserta si no existe
         await db.productos.update_one(
             {"nombre": p["nombre"]},
             {"$setOnInsert": p},
             upsert=True,
         )
-        # Asegura/actualiza imagen y descripción
         await db.productos.update_one(
             {"nombre": p["nombre"]},
             {"$set": {
@@ -54,8 +51,6 @@ async def seed(db):
                 "descripcion": p["descripcion"],
             }}
         )
-
-    # Usuario demo
     await db.clientes.update_one(
         {"email": "demo@saborreal.com"},
         {"$setOnInsert": {
@@ -65,6 +60,4 @@ async def seed(db):
         }},
         upsert=True
     )
-
-    # Índice para comentarios
     await db.comentarios.create_index([("producto_id", 1)])

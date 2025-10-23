@@ -1,4 +1,3 @@
-# backend/app/security.py
 from passlib.context import CryptContext
 pwd_context = CryptContext(schemes=["pbkdf2_sha256", "bcrypt"], deprecated="auto")
 

@@ -32,8 +32,6 @@ async def _calc_total_snapshot_and_reserve(items: list[CartItem]) -> tuple[float
         prod = await database.db.productos.find_one({"_id": _oid(it.producto_id), "activo": True})
         if not prod:
             raise HTTPException(400, f"Producto no disponible: {it.producto_id}")
-
-        # Descuento de stock atómico solo si hay suficiente
         upd = await database.db.productos.update_one(
             {"_id": prod["_id"], "stock": {"$gte": it.qty}},
             {"$inc": {"stock": -it.qty}}
