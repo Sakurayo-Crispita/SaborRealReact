@@ -1,12 +1,10 @@
-# backend/app/tests/test_comentarios_flow.py
 import pytest
 from fastapi import status
 
-# Marca todo el archivo como "functional"
 pytestmark = pytest.mark.functional
 
 @pytest.mark.asyncio
-async def test_flow_login_y_comentar_producto(client):
+async def test_flow_login_comentar_y_listar(client):
     rlogin = await client.post("/api/auth/login", json={
         "email": "demo@saborreal.com",
         "password": "demo123"
@@ -29,4 +27,3 @@ async def test_flow_login_y_comentar_producto(client):
     c = rcom.json()
     assert c["producto_id"] == producto_id
     assert c["rating"] == 5
-
