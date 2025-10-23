@@ -1,59 +1,12 @@
 // src/App.jsx
-import { Link, Route, Routes, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { apix } from './api/api';
 import { useAuth } from './AuthContext.jsx';
 import { useCart } from './CartContext.jsx';
-import Catalogo from './Catalogo.jsx'
+import Catalogo from './Catalogo.jsx';
 import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
-import ProductoCard from './ProductoCard.jsx';
-// ❌ NO importes Catalogo desde archivo si lo defines aquí
-// import Catalogo from './Catalogo.jsx';
-
-function Catalogo() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [params, setParams] = useSearchParams();
-  const categoria = params.get('cat') || '';
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setLoading(true);
-        const data = await apix.getProductos(categoria);
-        if (alive) setItems(data);
-      } finally { if (alive) setLoading(false); }
-    })();
-    return () => { alive = false; };
-  }, [categoria]);
-
-  return (
-    <main style={{ maxWidth: 1080, margin:'2rem auto', padding:'0 1rem', color:'#eee' }}>
-      <label style={{ display:'block', margin:'1rem 0' }}>
-        Filtrar por categoría:{' '}
-        <select
-          value={categoria}
-          onChange={(e)=> setParams(e.target.value ? { cat: e.target.value } : {})}
-        >
-          <option value=''>Todas</option>
-          <option value='pan'>Pan</option>
-          <option value='postre'>Postre</option>
-          <option value='bebida'>Bebida</option>
-        </select>
-      </label>
-
-      {loading ? <p>Cargando…</p> : (
-        items.length === 0 ? <p>No hay productos.</p> : (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:16 }}>
-            {items.map(p => <ProductoCard key={p._id} p={p} />)}
-          </div>
-        )
-      )}
-    </main>
-  );
-}
 
 function Header() {
   const { isAuthenticated, email, logout } = useAuth();
@@ -105,7 +58,7 @@ function Orders() {
         <ul style={{lineHeight:1.8}}>
           {list.map(o => (
             <li key={o._id}>
-              <b>{o.code}</b> — {o.status} — ${o.total.toFixed(2)} — {new Date(o.creadoAt).toLocaleString()}
+              <b>{o.code}</b> — {o.status} — ${Number(o.total).toFixed(2)} — {new Date(o.creadoAt).toLocaleString()}
             </li>
           ))}
         </ul>
