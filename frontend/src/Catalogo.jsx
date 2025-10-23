@@ -3,21 +3,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { apix } from './api/api';
 import { useAuth } from './AuthContext.jsx';
-import Login from './Login';
 import ProductoCard from './ProductoCard';
 
-const VALID_CATS = new Set(['', 'pan', 'postre']); // en seed no hay "bebida"
+const VALID_CATS = new Set(['', 'pan', 'postre']); // en el seed solo hay estas
 
 export default function Catalogo() {
   const { isAuthenticated } = useAuth();
 
-  // --- URL <-> estado ---
   const [params, setParams] = useSearchParams();
   const rawCat = params.get('cat') ?? '';
-  const categoria = useMemo(
-    () => (VALID_CATS.has(rawCat) ? rawCat : ''), // normaliza
-    [rawCat]
-  );
+  const categoria = useMemo(() => (VALID_CATS.has(rawCat) ? rawCat : ''), [rawCat]);
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,14 +34,13 @@ export default function Catalogo() {
   }
 
   return (
-    <main style={{ maxWidth: 1080, margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui', color:'#eee' }}>
-      <header style={{display:'flex', justifyContent:'space-between', alignItems:'center', gap:16, flexWrap:'wrap'}}>
-        <h1 style={{margin:0}}>Sabor Real — Catálogo</h1>
-        <Login />
-      </header>
+    <main style={{ maxWidth: 1080, margin:'2rem auto', padding:'0 1rem', fontFamily:'system-ui', color:'#eee' }}>
+      <h1 style={{margin:'0 0 12px'}}>Sabor Real — Catálogo</h1>
 
       {!isAuthenticated && (
-        <small style={{color:'#aaa'}}>Inicia sesión para poder comentar productos.</small>
+        <small style={{color:'#aaa', display:'block', marginBottom:12}}>
+          Inicia sesión para poder comentar productos.
+        </small>
       )}
 
       <label style={{ display:'block', margin:'1rem 0' }}>
@@ -55,7 +49,7 @@ export default function Catalogo() {
           <option value=''>Todas</option>
           <option value='pan'>Pan</option>
           <option value='postre'>Postre</option>
-          {/* 'bebida' no está en el seed; agrégalo cuando tengas datos */}
+          {/* Cuando tengas productos de bebida, añade 'bebida' al seed y a VALID_CATS */}
         </select>
       </label>
 
@@ -68,10 +62,8 @@ export default function Catalogo() {
       ) : items.length === 0 ? (
         <p>No hay productos para esta categoría.</p>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:'16px' }}>
-          {items.map(p => (
-            <ProductoCard key={p._id || p.id || p.nombre} p={p} />
-          ))}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:16 }}>
+          {items.map(p => <ProductoCard key={p._id || p.id || p.nombre} p={p} />)}
         </div>
       )}
     </main>
