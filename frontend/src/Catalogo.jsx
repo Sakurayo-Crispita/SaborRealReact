@@ -1,25 +1,42 @@
 // src/Catalogo.jsx
-import { useEffect, useState } from 'react';
-import { apix } from './api/api';         // <- usamos apix
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { apix } from './api/api';
 import { useAuth } from './AuthContext.jsx';
 import Login from './Login';
 import ProductoCard from './ProductoCard';
 
+const VALID_CATS = new Set(['', 'pan', 'postre']); // en seed no hay "bebida"
+
 export default function Catalogo() {
+  const { isAuthenticated } = useAuth();
+
+  // --- URL <-> estado ---
+  const [params, setParams] = useSearchParams();
+  const rawCat = params.get('cat') ?? '';
+  const categoria = useMemo(
+    () => (VALID_CATS.has(rawCat) ? rawCat : ''), // normaliza
+    [rawCat]
+  );
+
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [categoria, setCategoria] = useState('');
-  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    apix.getProductos(categoria)           // <- aquí estaba el fallo
-      .then(d => { if (alive) setItems(d); })
-      .catch(err => console.error('getProductos error:', err))
-      .finally(() => alive && setLoading(false));
+    apix.getProductos(categoria)
+      .then(d => { if (alive) setItems(Array.isArray(d) ? d : []); })
+      .catch(err => { console.error('getProductos error:', err); if (alive) setItems([]); })
+      .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [categoria]);
+
+  function onChangeCategoria(e) {
+    const v = e.target.value;
+    if (v) setParams({ cat: v });
+    else setParams({});
+  }
 
   return (
     <main style={{ maxWidth: 1080, margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui', color:'#eee' }}>
@@ -34,11 +51,11 @@ export default function Catalogo() {
 
       <label style={{ display:'block', margin:'1rem 0' }}>
         Filtrar por categoría:{' '}
-        <select value={categoria} onChange={(e)=>setCategoria(e.target.value)}>
+        <select value={categoria} onChange={onChangeCategoria}>
           <option value=''>Todas</option>
           <option value='pan'>Pan</option>
           <option value='postre'>Postre</option>
-          <option value='bebida'>Bebida</option>
+          {/* 'bebida' no está en el seed; agrégalo cuando tengas datos */}
         </select>
       </label>
 
@@ -51,12 +68,10 @@ export default function Catalogo() {
       ) : items.length === 0 ? (
         <p>No hay productos para esta categoría.</p>
       ) : (
-        <div style={{
-          display:'grid',
-          gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))',
-          gap:'16px'
-        }}>
-          {items.map(p => <ProductoCard key={p._id || p.id} p={p} />)}
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:'16px' }}>
+          {items.map(p => (
+            <ProductoCard key={p._id || p.id || p.nombre} p={p} />
+          ))}
         </div>
       )}
     </main>

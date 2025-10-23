@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { apix } from './api/api';
 import { useAuth } from './AuthContext.jsx';
 import { useCart } from './CartContext.jsx';
+import Catalogo from './Catalogo.jsx'
 import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
 import ProductoCard from './ProductoCard.jsx';
