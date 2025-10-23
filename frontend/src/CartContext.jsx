@@ -1,21 +1,46 @@
 // src/CartContext.jsx
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext(null);
 
 export function CartProvider({ children }) {
+  const { user } = useAuth(); // <- email del usuario actual (o null si no logueado)
+
+  // clave de storage por usuario (si no hay, usa "anon")
+  const storageKey = useMemo(
+    () => `sr_cart_${user?.email ?? 'anon'}`,
+    [user?.email]
+  );
+
   const [items, setItems] = useState([]);
 
+  // Cargar carrito del usuario actual
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('sr_cart');
-      if (saved) setItems(JSON.parse(saved));
-    } catch {}
-  }, []);
+      // migración: si existe el viejo 'sr_cart', úsalo una vez y bórralo
+      const legacy = localStorage.getItem('sr_cart');
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        setItems(JSON.parse(saved));
+      } else if (legacy) {
+        setItems(JSON.parse(legacy));
+        localStorage.removeItem('sr_cart');
+        localStorage.setItem(storageKey, legacy);
+      } else {
+        setItems([]);
+      }
+    } catch {
+      setItems([]);
+    }
+  }, [storageKey]);
 
+  // Guardar cambios del carrito para ese usuario
   useEffect(() => {
-    localStorage.setItem('sr_cart', JSON.stringify(items));
-  }, [items]);
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(items));
+    } catch {}
+  }, [items, storageKey]);
 
   function addItem(product, qty = 1) {
     setItems(prev => {
@@ -33,7 +58,10 @@ export function CartProvider({ children }) {
     setItems(prev => prev.filter(x => x._id !== id));
   }
 
-  function clear() { setItems([]); }
+  function clear() {
+    setItems([]);
+    try { localStorage.removeItem(storageKey); } catch {}
+  }
 
   const total = items.reduce((acc, it) => acc + (Number(it.precio) || 0) * it.qty, 0);
 

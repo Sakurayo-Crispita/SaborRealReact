@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   async function login(email, password) {
-    const data = await apix.login(email, password); // { access_token, token_type }
+    const data = await apix.login(email, password);
     const rawToken = data.access_token;
     setToken(rawToken);
     localStorage.setItem('sr_token', rawToken);
@@ -37,22 +37,27 @@ export function AuthProvider({ children }) {
 
   async function register(payload) {
     await apix.register(payload);
-    // Luego puedes hacer login automático si quieres:
     await login(payload.email, payload.password);
   }
 
   function logout() {
+    // limpia auth
     setToken(null);
     setUser(null);
     localStorage.removeItem('sr_token');
     localStorage.removeItem('sr_user');
+
+    // limpia también el carrito del usuario actual (si había)
+    const email = JSON.parse(localStorage.getItem('sr_user') || 'null')?.email;
+    const key = `sr_cart_${email ?? 'anon'}`;
+    localStorage.removeItem(key);
   }
 
   const value = useMemo(
     () => ({
       token,
-      user,                       // { _id, email, nombre, rol, ... }
-      email: user?.email || null, // comodidad
+      user,
+      email: user?.email || null,
       isAuthenticated: Boolean(token),
       authHeader: token ? `Bearer ${token}` : null,
       login, register, logout,
