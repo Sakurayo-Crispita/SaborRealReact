@@ -3,6 +3,8 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Response
+
 
 from . import database
 from .seed import seed
@@ -21,10 +23,10 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Sabor Real API (MongoDB)", lifespan=lifespan)
 
 # CORS (puedes configurar con variable, o deja estos por defecto)
-origins = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-]
+origins = [o.strip() for o in os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:5173,http://127.0.0.1:5173"
+).split(",") if o.strip()]
 # si usas variable:
 # origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")]
 
@@ -45,3 +47,8 @@ app.include_router(orders.router)  # ← ticket/pedido (CREATED) sin pago
 @app.get("/")
 async def root():
     return {"ok": True, "service": "sabor-real-api-mongo"}
+@app.get("/healthz", include_in_schema=False)
+def healthz(): return {"status": "ok"}
+
+@app.head("/healthz", include_in_schema=False)
+def healthz_head(): return Response(status_code=200)
