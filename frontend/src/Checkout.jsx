@@ -21,6 +21,10 @@ export default function Checkout() {
     e.preventDefault();
     if (!isAuthenticated) { alert('Inicia sesión'); return; }
     if (items.length === 0) { alert('Tu ticket está vacío'); return; }
+    if (!form.delivery_nombre || !form.delivery_direccion) {
+      alert('Nombre y dirección son obligatorios');
+      return;
+    }
 
     // Construye el payload que espera /api/orders
     const payload = {
@@ -75,9 +79,9 @@ export default function Checkout() {
 
       <h3>Datos de entrega</h3>
       <form onSubmit={submit} style={{display:'grid', gap:8, maxWidth:480}}>
-        <input name="delivery_nombre" value={form.delivery_nombre} onChange={onChange} placeholder="Nombre" />
-        <input name="delivery_telefono" value={form.delivery_telefono} onChange={onChange} placeholder="Teléfono" />
-        <input name="delivery_direccion" value={form.delivery_direccion} onChange={onChange} placeholder="Dirección" />
+        <input name="delivery_nombre" required value={form.delivery_nombre} onChange={onChange} placeholder="Nombre" />
+        <input name="delivery_telefono" type="tel" inputMode="numeric" pattern="[0-9+\- ]{6,}" value={form.delivery_telefono} onChange={onChange} placeholder="Teléfono" />
+        <input name="delivery_direccion" required value={form.delivery_direccion} onChange={onChange} placeholder="Dirección" />
         <textarea name="notas" value={form.notas} onChange={onChange} placeholder="Notas (opcional)" />
         <button type="submit" disabled={items.length===0 || submitting}>
           {submitting ? 'Creando…' : 'Confirmar pedido'}
