@@ -1,6 +1,6 @@
 // src/Catalogo.jsx
 import { useEffect, useState } from 'react';
-import { api } from './api';
+import { apix } from './api/api';         // <- usamos apix
 import { useAuth } from './AuthContext.jsx';
 import Login from './Login';
 import ProductoCard from './ProductoCard';
@@ -14,8 +14,9 @@ export default function Catalogo() {
   useEffect(() => {
     let alive = true;
     setLoading(true);
-    api.getProductos(categoria)
+    apix.getProductos(categoria)           // <- aquí estaba el fallo
       .then(d => { if (alive) setItems(d); })
+      .catch(err => console.error('getProductos error:', err))
       .finally(() => alive && setLoading(false));
     return () => { alive = false; };
   }, [categoria]);
@@ -55,7 +56,7 @@ export default function Catalogo() {
           gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))',
           gap:'16px'
         }}>
-          {items.map(p => <ProductoCard key={p._id} p={p} />)}
+          {items.map(p => <ProductoCard key={p._id || p.id} p={p} />)}
         </div>
       )}
     </main>

@@ -11,15 +11,21 @@ export default function ProductoCard({ p }) {
   const [rating, setRating] = useState(5);
   const [comentarios, setComentarios] = useState([]);
 
+  const id = p._id || p.id;
+  const nombre = p.nombre ?? p.title ?? "Producto";
+  const precio = Number(p.precio ?? p.price ?? 0);
+  const categoria = p.categoria ?? p.category ?? "—";
+  const imagenUrl = p.imagenUrl ?? p.image ?? null;
+
   async function cargarComentarios() {
-    try { setComentarios(await apix.getComentarios(p._id)); } catch {}
+    try { setComentarios(await apix.getComentarios(id)); } catch {}
   }
-  useEffect(() => { cargarComentarios(); }, [p._id]);
+  useEffect(() => { cargarComentarios(); }, [id]);
 
   async function enviarComentario(e) {
     e.preventDefault();
     if (!texto.trim()) return;
-    await apix.createComentario(token, { producto_id: p._id, texto, rating: Number(rating) });
+    await apix.createComentario(token, { producto_id: id, texto, rating: Number(rating) });
     setTexto(''); setRating(5);
     await cargarComentarios();
   }
@@ -27,16 +33,16 @@ export default function ProductoCard({ p }) {
   return (
     <article style={{ border:'1px solid #2a2a2a', borderRadius:12, padding:16, background:'#151515' }}>
       <div style={{height:140, background:'#222', borderRadius:8, marginBottom:8, display:'grid', placeItems:'center'}}>
-        {p.imagenUrl ? <img src={p.imagenUrl} alt={p.nombre} style={{maxHeight:'100%', maxWidth:'100%'}}/> : <span style={{color:'#999'}}>Sin imagen</span>}
+        {imagenUrl ? <img src={imagenUrl} alt={nombre} style={{maxHeight:'100%', maxWidth:'100%'}}/> : <span style={{color:'#999'}}>Sin imagen</span>}
       </div>
 
-      <h3 style={{margin:'4px 0'}}>{p.nombre}</h3>
-      <small style={{color:'#aaa'}}>{p.categoria ?? 'Sin categoría'}</small>
+      <h3 style={{margin:'4px 0'}}>{nombre}</h3>
+      <small style={{color:'#aaa'}}>{categoria}</small>
       <p style={{margin:'8px 0', color:'#ddd'}}>{p.descripcion ?? '—'}</p>
-      <strong style={{color:'#7CFC8A'}}>${Number(p.precio).toFixed(2)}</strong>
+      <strong style={{color:'#7CFC8A'}}>${precio.toFixed(2)}</strong>
 
       <div style={{marginTop:10}}>
-        <button onClick={()=>addItem(p, 1)}>Añadir al ticket</button>
+        <button onClick={()=>addItem({_id: id, nombre, precio, categoria, imagenUrl}, 1)}>Añadir al ticket</button>
       </div>
 
       <div style={{marginTop:12}}>
