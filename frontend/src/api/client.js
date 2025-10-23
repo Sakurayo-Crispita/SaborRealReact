@@ -1,4 +1,5 @@
-const BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+// src/api/client.js
+const BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export function authHeader(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};

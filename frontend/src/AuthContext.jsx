@@ -1,8 +1,8 @@
 // src/AuthContext.jsx
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { apix } from './api/api';
 
 const AuthContext = createContext(null);
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
@@ -10,54 +10,35 @@ export function AuthProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const saved = localStorage.getItem('sr_token');
-        if (saved) {
-          setToken(saved);
-          // validar token y traer user
-          const me = await fetch(`${BASE_URL}/api/auth/me`, {
-            headers: { Authorization: `Bearer ${saved}` },
-          });
-          if (me.ok) {
-            setUser(await me.json());
-          } else {
-            // token inválido/expirado
-            localStorage.removeItem('sr_token');
-          }
-        }
-      } catch {}
-      setReady(true);
-    })();
+    try {
+      const t = localStorage.getItem('sr_token');
+      const u = localStorage.getItem('sr_user');
+      if (t) setToken(t);
+      if (u) setUser(JSON.parse(u));
+    } catch {}
+    setReady(true);
   }, []);
 
   async function login(email, password) {
-    const res = await fetch(`${BASE_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
+    const data = await apix.login(email, password); // { access_token, token_type }
+    const rawToken = data.access_token;
+    setToken(rawToken);
+    localStorage.setItem('sr_token', rawToken);
 
-    if (!res.ok) {
-      const msg = (await res.json().catch(() => null))?.detail || 'Credenciales inválidas';
-      throw new Error(msg);
-    }
-
-    const { access_token } = await res.json();
-    setToken(access_token);
-    localStorage.setItem('sr_token', access_token);
-
-    // pedir /me con el token nuevo
-    const me = await fetch(`${BASE_URL}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${access_token}` },
-    });
-    if (me.ok) {
-      setUser(await me.json());
-      localStorage.setItem('sr_user', JSON.stringify(await me.clone().json()));
-    } else {
+    try {
+      const me = await apix.me(rawToken);
+      setUser(me);
+      localStorage.setItem('sr_user', JSON.stringify(me));
+    } catch {
       setUser(null);
       localStorage.removeItem('sr_user');
     }
+  }
+
+  async function register(payload) {
+    await apix.register(payload);
+    // Luego puedes hacer login automático si quieres:
+    await login(payload.email, payload.password);
   }
 
   function logout() {
@@ -67,29 +48,15 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('sr_user');
   }
 
-  // helper para fetch con auth y manejo 401
-  async function fetchWithAuth(path, init = {}) {
-    const headers = new Headers(init.headers || {});
-    if (token) headers.set('Authorization', `Bearer ${token}`);
-    const res = await fetch(`${BASE_URL}${path}`, { ...init, headers });
-    if (res.status === 401) {
-      // token expirado → limpiar sesión
-      logout();
-    }
-    return res;
-  }
-
   const value = useMemo(
     () => ({
       token,
-      user,
+      user,                       // { _id, email, nombre, rol, ... }
+      email: user?.email || null, // comodidad
       isAuthenticated: Boolean(token),
       authHeader: token ? `Bearer ${token}` : null,
-      login,
-      logout,
-      fetchWithAuth,
+      login, register, logout,
       ready,
-      BASE_URL,
     }),
     [token, user, ready]
   );

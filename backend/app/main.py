@@ -3,29 +3,31 @@ import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import productos, comentarios, auth, orders
-from .routers import productos, comentarios, auth, pedidos
 
 from . import database
 from .seed import seed
-from .routers import productos, comentarios, auth
+from .routers import productos, comentarios, auth, orders  # ← usa SOLO orders
 
-# --- Lifespan (reemplaza on_event) ---
+# Lifespan (startup/shutdown)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # === startup ===
     await database.connect()
     await seed(database.db)
     try:
         yield
     finally:
-        # === shutdown ===
         await database.disconnect()
 
 app = FastAPI(title="Sabor Real API (MongoDB)", lifespan=lifespan)
 
-# CORS
-origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")]
+# CORS (puedes configurar con variable, o deja estos por defecto)
+origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+# si usas variable:
+# origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")]
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -34,12 +36,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Rutas
+# Routers
 app.include_router(productos.router)
 app.include_router(comentarios.router)
 app.include_router(auth.router)
-app.include_router(orders.router)
-app.include_router(pedidos.router)
+app.include_router(orders.router)  # ← ticket/pedido (CREATED) sin pago
 
 @app.get("/")
 async def root():
