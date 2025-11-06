@@ -126,31 +126,21 @@ input:focus, select:focus, textarea:focus{
 /* Errores / hints */
 .form-error{ color: var(--danger); font-size: 13px; margin-top: 6px }
 .hint{ color: var(--muted); font-size: 13px }
-
-/* ==== Left slide panel ==== */
+/* === Burbuja lateral con animación (no empuja layout) === */
 .lr {
   position: fixed;
-  top: 96px;             /* debajo del header */
+  top: 96px;           /* debajo del header */
   left: 0;
-  width: 260px;          /* ancho del panel */
-  /* cuando está cerrado solo se ve la solapa de 48px */
-  transform: translateX(calc(-100% + 48px));
-  transition: transform 240ms ease;
-  z-index: 10;           /* bajo; no sobrepone el contenido central */
+  z-index: 10;         /* bajo para no tapar el contenido central */
 }
 
-/* abierto = panel completo visible */
-.lr--open {
-  transform: translateX(0);
-}
-
-/* Botón/solapa de apertura/cierre (48px) */
+/* Botón redondo (lo único visible cuando está cerrado) */
 .lr__toggle {
   position: absolute;
-  top: 12px;
-  right: -1px;           /* pegado al borde visible */
-  width: 48px;
-  height: 48px;
+  left: 8px;
+  top: 0;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   display: grid;
   place-items: center;
@@ -161,26 +151,50 @@ input:focus, select:focus, textarea:focus{
   cursor: pointer;
 }
 
-/* Cuerpo del panel */
-.lr__panel {
+/* Burbuja flotante */
+.lr__bubble {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 320px;                  /* ancho de la burbuja */
   background: #1b1f22;
   color: #e9ecef;
   border: 1px solid #2b3035;
-  border-radius: 14px;
-  padding: 12px 12px 12px 56px; /* deja espacio para la solapa */
+  border-radius: 16px;
+  padding: 12px 14px 14px 14px;
   box-shadow: 0 12px 24px rgba(0,0,0,.22);
+
+  /* escondida por defecto, solo se asoma 8px (la flecha) */
+  transform: translateX(calc(-100% + 60px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 240ms ease, opacity 200ms ease;
 }
 
-.lr__section + .lr__section { margin-top: 12px; }
+/* cuando está abierta, aparece completa */
+.lr--open .lr__bubble {
+  transform: translateX(8px);
+  opacity: 1;
+  pointer-events: auto;
+}
 
+/* tipografía y detalles */
 .lr__title {
-  font-size: .85rem;
-  color: #9aa0a6;
+  font-size: .9rem;
   font-weight: 700;
-  letter-spacing: .02em;
+  color: #c6cbd2;
   margin-bottom: 6px;
 }
-
+.lr__text {
+  font-size: .9rem;
+  color: #b8bec5;
+  margin: 0 0 8px 0;
+}
+.lr__divider {
+  border: none;
+  border-top: 1px solid #2b3035;
+  margin: 8px 0 10px 0;
+}
 .lr__link {
   display: block;
   color: #e9ecef;
@@ -189,7 +203,8 @@ input:focus, select:focus, textarea:focus{
 }
 .lr__link:hover { text-decoration: underline; }
 
-/* En pantallas muy estrechas, el panel queda cerrado y no estorba */
+/* en pantallas estrechas, mantenla cerrada por defecto y más compacta */
 @media (max-width: 992px) {
   .lr { top: 84px; }
+  .lr__bubble { width: 280px; }
 }
