@@ -36,8 +36,8 @@ export default function LeftRail() {
 
         <div className="lr__title">Historia de Sabor Real</div>
         <p className="lr__text">
-          (Aquí un resumen breve de la historia de la panadería: origen, años,
-          recetas familiares, hitos… Puedes ampliar cuando tengas más material.)
+          Sabor Real comenzó como un horno pequeño en Cajamarca. Entre madrugadas y cuadernos manchados de harina, aprendimos que el buen pan no se apura: se respeta el reposo, el clima y el sabor de los insumos locales. Con el tiempo sumamos croissants, pan francés y tortas artesanales para las celebraciones del barrio.
+          Para atender mejor, abrimos pedidos en línea con retiro en tienda: eliges en el catálogo, prepararmos tu pedido y lo recoges sin filas. Mantenemos lotes pequeños, recetas familiares y esa meta diaria de siempre: que al primer bocado digas “esto sabe a hogar”.
         </p>
 
         <hr className="lr__divider" />
