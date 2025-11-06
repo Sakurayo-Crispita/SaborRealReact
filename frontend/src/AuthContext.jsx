@@ -66,14 +66,14 @@ export function AuthProvider({ children }) {
     () => ({
       token,
       user,
-      profile, setProfile,                               // <-- NUEVO
       email: user?.email || null,
       isAuthenticated: Boolean(token),
       authHeader: token ? `Bearer ${token}` : null,
       login, register, logout,
       ready,
+      setUser,
     }),
-    [token, user, profile, ready]
+    [token, user, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
