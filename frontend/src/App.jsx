@@ -2,6 +2,8 @@
 import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { apix } from './api/api';
+import LeftRail from "./LeftRail";
+import Historia from "./Historia";
 import { useAuth } from './AuthContext.jsx';
 import { useCart } from './CartContext.jsx';
 import Catalogo from './Catalogo.jsx';
@@ -71,11 +73,13 @@ export default function App() {
   return (
     <>
       <Header />
+      <LeftRail /> 
       <Routes>
         <Route path="/" element={<Catalogo />} />
         <Route path="/login" element={<Login />} />
         <Route path="/checkout" element={<Checkout />} />
         <Route path="/orders" element={<Orders />} />
+        <Route path="/historia" element={<Historia />} />
       </Routes>
     </>
   );
