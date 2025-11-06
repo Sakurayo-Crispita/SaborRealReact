@@ -7,14 +7,17 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);          // <-- NUEVO
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
       const t = localStorage.getItem('sr_token');
       const u = localStorage.getItem('sr_user');
+      const p = localStorage.getItem('sr_profile');       // <-- NUEVO
       if (t) setToken(t);
       if (u) setUser(JSON.parse(u));
+      if (p) setProfile(JSON.parse(p));                   // <-- NUEVO
     } catch {}
     setReady(true);
   }, []);
@@ -33,6 +36,7 @@ export function AuthProvider({ children }) {
       setUser(null);
       localStorage.removeItem('sr_user');
     }
+    // si tu /me retorna perfil, podrías setProfile(me.profile)
   }
 
   async function register(payload) {
@@ -41,30 +45,35 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    // limpia auth
     setToken(null);
     setUser(null);
+    setProfile(null);                                     // <-- NUEVO
     localStorage.removeItem('sr_token');
     localStorage.removeItem('sr_user');
+    localStorage.removeItem('sr_profile');                // <-- NUEVO
     localStorage.removeItem('sr_cart'); 
-
-    // limpia también el carrito del usuario actual (si había)
     const email = JSON.parse(localStorage.getItem('sr_user') || 'null')?.email;
     const key = `sr_cart_${email ?? 'anon'}`;
     localStorage.removeItem(key);
   }
 
+  // persiste el perfil cuando cambie
+  useEffect(() => {
+    if (profile) localStorage.setItem('sr_profile', JSON.stringify(profile));
+  }, [profile]);
+
   const value = useMemo(
     () => ({
       token,
       user,
+      profile, setProfile,                               // <-- NUEVO
       email: user?.email || null,
       isAuthenticated: Boolean(token),
       authHeader: token ? `Bearer ${token}` : null,
       login, register, logout,
       ready,
     }),
-    [token, user, ready]
+    [token, user, profile, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

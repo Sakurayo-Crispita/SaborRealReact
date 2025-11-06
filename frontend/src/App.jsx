@@ -9,8 +9,9 @@ import { useCart } from './CartContext.jsx';
 import Catalogo from './Catalogo.jsx';
 import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
+import ProfileModal from './ProfileModal.jsx'; // <-- NUEVO
 
-function Header() {
+function Header({ onOpenProfile }) {                 // <-- recibe prop
   const { isAuthenticated, email, logout } = useAuth();
   const { items, total } = useCart();
 
@@ -26,6 +27,7 @@ function Header() {
         {isAuthenticated ? (
           <>
             <small style={{marginRight:8}}>Hola, {email}</small>
+            <button style={{marginRight:8}} onClick={onOpenProfile}>Mi perfil</button>  {/* <-- botón */}
             <button onClick={logout}>Salir</button>
           </>
         ) : (
@@ -47,7 +49,7 @@ function Orders() {
       if (!isAuthenticated) { nav('/login'); return; }
       try {
         const data = await apix.myOrders(token);
-        if (alive) setList(data);
+        if (alive) setList(Array.isArray(data) ? data : []);
       } catch (e) {}
     })();
     return () => { alive = false; };
@@ -59,8 +61,10 @@ function Orders() {
       {list.length === 0 ? <p>No tienes pedidos.</p> : (
         <ul style={{lineHeight:1.8}}>
           {list.map(o => (
-            <li key={o._id}>
-              <b>{o.code}</b> — {o.status} — ${Number(o.total).toFixed(2)} — {new Date(o.creadoAt).toLocaleString()}
+            <li key={o._id ?? o.code}>
+              <b>{o.code ?? "—"}</b> — {o.status ?? "sin estado"} — ${Number(o.total ?? 0).toFixed(2)} — {
+                new Date(o.createdAt ?? o.creadoAt ?? o.fecha ?? Date.now()).toLocaleString()
+              }
             </li>
           ))}
         </ul>
@@ -70,9 +74,11 @@ function Orders() {
 }
 
 export default function App() {
+  const [openProfile, setOpenProfile] = useState(false);  // <-- estado modal
+
   return (
     <>
-      <Header />
+      <Header onOpenProfile={() => setOpenProfile(true)} />  {/* pasa prop */}
       <LeftRail /> 
       <Routes>
         <Route path="/" element={<Catalogo />} />
@@ -81,6 +87,9 @@ export default function App() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/historia" element={<Historia />} />
       </Routes>
+
+      {/* Modal */}
+      <ProfileModal open={openProfile} onClose={() => setOpenProfile(false)} />
     </>
   );
 }

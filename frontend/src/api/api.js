@@ -97,6 +97,27 @@ export const apix = {
       })
     );
   },
+    /* ========== Perfil (requiere login) ========== */
+  updateProfile(token, payload /* { name, phone, birthdate, gender, email, avatar? } */) {
+    return handle(() =>
+      api("/api/profile", {
+        method: "PUT",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
+  changePassword(token, payload /* { oldPassword, newPassword } */) {
+    return handle(() =>
+      api("/api/profile/password", {
+        method: "POST",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
 };
 
 export default apix;
