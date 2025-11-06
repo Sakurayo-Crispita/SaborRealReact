@@ -127,60 +127,69 @@ input:focus, select:focus, textarea:focus{
 .form-error{ color: var(--danger); font-size: 13px; margin-top: 6px }
 .hint{ color: var(--muted); font-size: 13px }
 
-/* --- LeftRail --- */
-.left-rail {
+/* ==== Left slide panel ==== */
+.lr {
   position: fixed;
-  top: 50%;
-  left: 8px;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  z-index: 1030;
+  top: 96px;             /* debajo del header */
+  left: 0;
+  width: 260px;          /* ancho del panel */
+  /* cuando está cerrado solo se ve la solapa de 48px */
+  transform: translateX(calc(-100% + 48px));
+  transition: transform 240ms ease;
+  z-index: 10;           /* bajo; no sobrepone el contenido central */
 }
 
-.lr-btn {
+/* abierto = panel completo visible */
+.lr--open {
+  transform: translateX(0);
+}
+
+/* Botón/solapa de apertura/cierre (48px) */
+.lr__toggle {
+  position: absolute;
+  top: 12px;
+  right: -1px;           /* pegado al borde visible */
   width: 48px;
   height: 48px;
   border-radius: 999px;
   display: grid;
   place-items: center;
-  background: #212529;           /* acorde a tu tema oscuro */
+  background: #212529;
   color: #e9ecef;
   border: 1px solid #2b3035;
-  box-shadow: 0 6px 18px rgba(0,0,0,.3);
-  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(0,0,0,.30);
+  cursor: pointer;
 }
 
-.lr-btn:hover { filter: brightness(1.1); }
-
-.lr-card {
-  width: 220px;
+/* Cuerpo del panel */
+.lr__panel {
   background: #1b1f22;
   color: #e9ecef;
   border: 1px solid #2b3035;
-  border-radius: 12px;
-  padding: 10px 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,.3);
+  border-radius: 14px;
+  padding: 12px 12px 12px 56px; /* deja espacio para la solapa */
+  box-shadow: 0 12px 24px rgba(0,0,0,.22);
 }
 
-.lr-title {
-  font-size: .8rem;
+.lr__section + .lr__section { margin-top: 12px; }
+
+.lr__title {
+  font-size: .85rem;
   color: #9aa0a6;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: .02em;
   margin-bottom: 6px;
 }
 
-.lr-link {
+.lr__link {
   display: block;
   color: #e9ecef;
   text-decoration: none;
-  margin: 2px 0;
+  padding: 2px 0;
 }
-.lr-link:hover { text-decoration: underline; }
+.lr__link:hover { text-decoration: underline; }
 
-/* opcional: separa un poco el contenido para que no se solape en pantallas grandes */
-@media (min-width: 1200px) {
-  .container, main { padding-left: 0.5rem; }
+/* En pantallas muy estrechas, el panel queda cerrado y no estorba */
+@media (max-width: 992px) {
+  .lr { top: 84px; }
 }
