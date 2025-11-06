@@ -285,3 +285,55 @@ input:focus, select:focus, textarea:focus{
 @media (max-width: 920px){
   .pmodal__grid, .pmodal__grid3{ grid-template-columns:1fr; }
 }
+header a, header small{
+  color:#3a3a3a;
+  text-decoration:none;
+  font-weight:600;
+}
+header nav a{
+  color:#5a5a5a;
+  padding:6px 10px;
+  border-radius:8px;
+  transition: background .2s ease, color .2s ease;
+}
+header nav a:hover{
+  background:#f3e7d9;   /* beige suave */
+  color:#2f2f2f;
+}
+/* Si usas <NavLink>, marca la ruta activa */
+header nav a[aria-current="page"]{
+  background:#f0e2ce;
+  color:#2b2b2b;
+}
+
+/* Título principal bajo el header (Catálogo) */
+main h1, main h2, .page-title{
+  color:#7a4f29;         /* marrón cálido */
+  text-shadow:0 1px 0 rgba(255,255,255,.4);
+}
+
+/* Select de filtro: contraste sobre fondo crema */
+select, .filter select{
+  background:#fff;
+  border:1px solid var(--border);
+  color:var(--text);
+}
+
+/* Cards: subir contraste de tipografía */
+.card h3, .card h4, .card .title{ color:#734a28; margin-top:.25rem; }
+.card p, .card .desc, .card label, .card small{ color:#4b5563; }
+
+/* Botones dentro de cards consistentes con el naranja */
+.card button{ background:var(--primary); color:#fff; }
+
+/* Inputs dentro de cards: borde un poco más definido */
+.card input, .card select, .card textarea{ border-color:#e6dccf; }
+
+/* Badge: borde un pelín más visible */
+.badge{ border-color:rgba(226,133,67,.45); }
+
+/* Sombra un poco más suave en cards para tema claro */
+.card{ box-shadow:0 10px 24px rgba(0,0,0,.08); }
+
+/* (Opcional) separa contenido del header si queda muy pegado */
+main{ padding-top:8px; }
