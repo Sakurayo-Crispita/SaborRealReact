@@ -1,8 +1,9 @@
+// src/ProfileModal.jsx
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { apix } from "./api/api";
 
-// Util: vista previa de imagen local
+// Util: vista previa de imagen local (solo para UI)
 function fileToDataURL(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -13,16 +14,18 @@ function fileToDataURL(file) {
 }
 
 export default function ProfileModal({ open, onClose }) {
-  const { token, email, profile = {}, setProfile } = useAuth();
+  const { token, user, email } = useAuth(); // user puede venir de localStorage
   const [form, setForm] = useState({
-    name: profile?.name ?? "",
-    phone: profile?.phone ?? "",
-    birthdate: profile?.birthdate ?? "",
-    gender: profile?.gender ?? "na",
+    nombre: user?.nombre ?? "",
+    telefono: user?.telefono ?? "",
+    direccion: user?.direccion ?? "",
+    genero: user?.genero ?? "na",
+    fecha_nacimiento: user?.fecha_nacimiento ?? "",
   });
-  const [avatar, setAvatar] = useState(profile?.avatarUrl || "");
+  const [avatar, setAvatar] = useState(""); // solo UI
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+
   const passOldRef = useRef(null);
   const passNewRef = useRef(null);
   const passNew2Ref = useRef(null);
@@ -31,31 +34,51 @@ export default function ProfileModal({ open, onClose }) {
   useEffect(() => {
     if (open) {
       setForm({
-        name: profile?.name ?? "",
-        phone: profile?.phone ?? "",
-        birthdate: profile?.birthdate ?? "",
-        gender: profile?.gender ?? "na",
+        nombre: user?.nombre ?? "",
+        telefono: user?.telefono ?? "",
+        direccion: user?.direccion ?? "",
+        genero: user?.genero ?? "na",
+        fecha_nacimiento: user?.fecha_nacimiento ?? "",
       });
-      setAvatar(profile?.avatarUrl || "");
+      setAvatar("");
       setMsg("");
     }
-  }, [open, profile]);
+  }, [open, user]);
 
   const onPickAvatar = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) return setMsg("El archivo debe ser una imagen.");
+    if (!file.type.startsWith("image/")) {
+      setMsg("El archivo debe ser una imagen.");
+      return;
+    }
     const dataUrl = await fileToDataURL(file);
-    setAvatar(dataUrl); // vista previa inmediata
+    setAvatar(dataUrl); // solo vista previa (no se envía al backend)
   };
 
   const saveProfile = async () => {
-    setBusy(true); setMsg("");
+    setBusy(true);
+    setMsg("");
     try {
-      const payload = { ...form, email, avatar }; // avatar en base64 (simple)
-      const updated = await apix.updateProfile(token, payload);
-      // Actualiza el contexto si lo manejas allí:
-      setProfile?.(updated ?? payload);
+      // Solo mandamos campos soportados por el backend
+      const payload = {
+        nombre: form.nombre || undefined,
+        telefono: form.telefono || undefined,
+        direccion: form.direccion || undefined,
+        genero: form.genero || undefined,
+        fecha_nacimiento: form.fecha_nacimiento || undefined,
+      };
+
+      await apix.updateProfile(token, payload);
+
+      // Refrescar datos de /me y persistirlos
+      try {
+        const me = await apix.me(token);
+        localStorage.setItem("sr_user", JSON.stringify(me));
+      } catch {
+        /* opcional: manejar error de refresco */
+      }
+
       setMsg("✅ Perfil actualizado.");
     } catch (e) {
       setMsg("❌ No se pudo actualizar el perfil.");
@@ -65,14 +88,18 @@ export default function ProfileModal({ open, onClose }) {
   };
 
   const changePassword = async () => {
-    setBusy(true); setMsg("");
+    setBusy(true);
+    setMsg("");
     try {
       const oldp = passOldRef.current.value;
       const p1 = passNewRef.current.value;
       const p2 = passNew2Ref.current.value;
       if (!oldp || !p1) throw new Error("Completa las contraseñas.");
       if (p1 !== p2) throw new Error("Las contraseñas nuevas no coinciden.");
-      await apix.changePassword(token, { oldPassword: oldp, newPassword: p1 });
+
+      // Firma correcta: (token, currentPassword, newPassword)
+      await apix.changePassword(token, oldp, p1);
+
       setMsg("🔒 Contraseña actualizada.");
       passOldRef.current.value = "";
       passNewRef.current.value = "";
@@ -91,14 +118,14 @@ export default function ProfileModal({ open, onClose }) {
       <div className="pmodal" onClick={(e) => e.stopPropagation()}>
         {/* Encabezado */}
         <div className="pmodal__header">
-          <img className="pmodal__brand" src="/logo192.png" alt="Sabor Real" />
+          <div className="pmodal__brandPh">SR</div>
           <h3 className="pmodal__title">Mi Perfil</h3>
           <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">×</button>
         </div>
 
         {/* Contenido */}
         <div className="pmodal__body">
-          {/* Avatar */}
+          {/* Avatar (solo UI) */}
           <div className="pmodal__avatarBox">
             <div className="pmodal__avatar">
               {avatar ? <img src={avatar} alt="Avatar" /> : <div className="pmodal__avatarPh">👤</div>}
@@ -113,28 +140,51 @@ export default function ProfileModal({ open, onClose }) {
           <div className="pmodal__grid">
             <div className="form__grp">
               <label>Nombre de usuario</label>
-              <input value={form.name}
-                     onChange={e => setForm({ ...form, name: e.target.value })}
-                     placeholder="Tu nombre" />
+              <input
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                placeholder="Tu nombre"
+              />
             </div>
+
             <div className="form__grp">
               <label>Correo electrónico</label>
-              <input value={email} disabled />
+              <input value={email || user?.email || ""} disabled />
             </div>
+
             <div className="form__grp">
               <label>Número de teléfono</label>
-              <input value={form.phone}
-                     onChange={e => setForm({ ...form, phone: e.target.value })}
-                     placeholder="+51 ..." />
+              <input
+                value={form.telefono}
+                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                placeholder="+51 ..."
+              />
             </div>
+
+            <div className="form__grp">
+              <label>Dirección</label>
+              <input
+                value={form.direccion}
+                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                placeholder="Cajamarca, Perú"
+              />
+            </div>
+
             <div className="form__grp">
               <label>Fecha de nacimiento</label>
-              <input type="date" value={form.birthdate}
-                     onChange={e => setForm({ ...form, birthdate: e.target.value })} />
+              <input
+                type="date"
+                value={form.fecha_nacimiento}
+                onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })}
+              />
             </div>
+
             <div className="form__grp">
               <label>Género</label>
-              <select value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}>
+              <select
+                value={form.genero}
+                onChange={(e) => setForm({ ...form, genero: e.target.value })}
+              >
                 <option value="na">Prefiero no decirlo</option>
                 <option value="female">Femenino</option>
                 <option value="male">Masculino</option>
@@ -151,9 +201,18 @@ export default function ProfileModal({ open, onClose }) {
           <div className="pmodal__divider" />
           <h4 className="pmodal__subtitle">Cambiar contraseña</h4>
           <div className="pmodal__grid3">
-            <div className="form__grp"><label>Contraseña actual</label><input type="password" ref={passOldRef} /></div>
-            <div className="form__grp"><label>Nueva contraseña</label><input type="password" ref={passNewRef} /></div>
-            <div className="form__grp"><label>Confirmar nueva</label><input type="password" ref={passNew2Ref} /></div>
+            <div className="form__grp">
+              <label>Contraseña actual</label>
+              <input type="password" ref={passOldRef} />
+            </div>
+            <div className="form__grp">
+              <label>Nueva contraseña</label>
+              <input type="password" ref={passNewRef} />
+            </div>
+            <div className="form__grp">
+              <label>Confirmar nueva</label>
+              <input type="password" ref={passNew2Ref} />
+            </div>
           </div>
           <button className="btn btn-accent" onClick={changePassword} disabled={busy}>
             Actualizar contraseña
