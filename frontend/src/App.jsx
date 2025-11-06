@@ -11,27 +11,29 @@ import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
 import ProfileModal from './ProfileModal.jsx'; // <-- NUEVO
 
-function Header({ onOpenProfile }) {                 // <-- recibe prop
+function Header({ onOpenProfile }) {
   const { isAuthenticated, email, logout } = useAuth();
   const { items, total } = useCart();
 
   return (
-    <header style={{display:'flex', gap:16, alignItems:'center', justifyContent:'space-between', padding:'12px 16px', background:'#111', color:'#eee'}}>
-      <Link to="/" style={{color:'#fff', textDecoration:'none', fontWeight:700}}>Sabor Real</Link>
-      <nav style={{display:'flex', gap:12}}>
-        <Link to="/" style={{color:'#ccc'}}>Catálogo</Link>
-        <Link to="/checkout" style={{color:'#ccc'}}>Ticket ({items.length}) — ${total.toFixed(2)}</Link>
-        <Link to="/orders" style={{color:'#ccc'}}>Mis pedidos</Link>
+    <header className="site-header">
+      <Link to="/" className="site-header__brand">Sabor Real</Link>
+
+      <nav className="site-header__nav">
+        <Link to="/">Catálogo</Link>
+        <Link to="/checkout">Ticket ({items.length}) — ${total.toFixed(2)}</Link>
+        <Link to="/orders">Mis pedidos</Link>
       </nav>
-      <div>
+
+      <div className="site-header__right">
         {isAuthenticated ? (
           <>
-            <small style={{marginRight:8}}>Hola, {email}</small>
-            <button style={{marginRight:8}} onClick={onOpenProfile}>Mi perfil</button>  {/* <-- botón */}
-            <button onClick={logout}>Salir</button>
+            <small>Hola, {email}</small>
+            <button className="btn btn-accent" onClick={onOpenProfile}>Mi perfil</button>
+            <button className="btn btn-primary" onClick={logout}>Salir</button>
           </>
         ) : (
-          <Link to="/login"><button>Entrar</button></Link>
+          <Link to="/login"><button className="btn btn-primary">Entrar</button></Link>
         )}
       </div>
     </header>

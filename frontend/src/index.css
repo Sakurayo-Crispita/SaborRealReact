@@ -337,3 +337,54 @@ select, .filter select{
 
 /* (Opcional) separa contenido del header si queda muy pegado */
 main{ padding-top:8px; }
+/* ===== Header claro integrado a la paleta ===== */
+.site-header{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; padding:12px 16px;
+  background: linear-gradient(180deg, #fff, #faf6ee);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 16px rgba(0,0,0,.05);
+  color:#3a3a3a;
+}
+.site-header__brand{
+  color:#3a3a3a; text-decoration:none; font-weight:800; font-size:18px;
+}
+.site-header__nav{ display:flex; gap:12px; }
+.site-header__nav a{
+  color:#5a5a5a; text-decoration:none; font-weight:600;
+  padding:6px 10px; border-radius:8px;
+  transition: background .2s ease, color .2s ease;
+}
+.site-header__nav a:hover{ background:#f3e7d9; color:#2f2f2f; }
+.site-header__right small{ color:#6b6b6b; margin-right:8px; }
+
+/* Marca la ruta activa si usas <NavLink> */
+.site-header__nav a[aria-current="page"]{
+  background:#f0e2ce; color:#2b2b2b;
+}
+
+/* ===== Contraste de textos generales ===== */
+main, main p, main li, label, .hint{ color: var(--text); }
+.hint{ color:#6b7280; }
+
+/* Títulos cálidos */
+main h1, main h2, .page-title{
+  color:#7a4f29; text-shadow:0 1px 0 rgba(255,255,255,.4);
+}
+
+/* Select del filtro: que se lea bien */
+select, .filter select{
+  background:#fff; border:1px solid var(--border); color:#2a2a2a;
+}
+
+/* Cards: títulos y cuerpo más legibles */
+.card h3, .card h4, .card .title{ color:#734a28; }
+.card p, .card .desc, .card small, .card label{ color:#4b5563; }
+
+/* Botón dentro de card */
+.card button{ background:var(--primary); color:#fff; }
+
+/* ===== Checkout / “Mis pedidos”: subir contraste en listados ===== */
+table, th, td{ color:#2a2a2a; }
+.summary, .totals, .ticket, .orders-list, .orders-list *{ color:#2a2a2a; }
