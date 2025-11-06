@@ -1,11 +1,13 @@
+// src/LeftRail.jsx
 import { useState } from "react";
+import histImg from "./assets/logo.jpg";
 
 export default function LeftRail() {
   const [open, setOpen] = useState(false);
 
   return (
     <aside className={`lr ${open ? "lr--open" : "lr--closed"}`} aria-label="Burbuja lateral">
-      {/* flecha (único elemento visible cuando está cerrado) */}
+      {/* Flecha (siempre visible) */}
       <button
         className="lr__toggle"
         aria-label={open ? "Ocultar información" : "Mostrar información"}
@@ -24,8 +26,14 @@ export default function LeftRail() {
         </svg>
       </button>
 
-      {/* burbuja flotante (solo visible cuando open=true) */}
+      {/* Burbuja flotante */}
       <div className="lr__bubble" role="dialog" aria-modal="false">
+        {/* Imagen arriba del contenido */}
+        <div className="lr__imgWrap">
+          {/* Si no tienes la imagen aún, comenta la línea de abajo */}
+          <img src={histImg} alt="Sabor Real - Historia" className="lr__img" />
+        </div>
+
         <div className="lr__title">Historia de Sabor Real</div>
         <p className="lr__text">
           (Aquí un resumen breve de la historia de la panadería: origen, años,

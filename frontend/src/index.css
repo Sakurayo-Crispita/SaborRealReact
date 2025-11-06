@@ -131,13 +131,13 @@ input:focus, select:focus, textarea:focus{
   position: fixed;
   top: 96px;           /* debajo del header */
   left: 0;
-  z-index: 10;         /* bajo para no tapar el contenido central */
+  z-index: 10;
 }
 
-/* Botón redondo (lo único visible cuando está cerrado) */
+/* Botón redondo (siempre visible) */
 .lr__toggle {
   position: absolute;
-  left: 8px;
+  left: 8px;           /* posición cuando está cerrado */
   top: 0;
   width: 44px;
   height: 44px;
@@ -149,6 +149,12 @@ input:focus, select:focus, textarea:focus{
   border: 1px solid #2b3035;
   box-shadow: 0 6px 18px rgba(0,0,0,.30);
   cursor: pointer;
+  z-index: 2;          /* MÁS alto que la burbuja para que no se tape */
+}
+
+/* cuando está abierto, mueve la flecha al borde derecho del panel */
+.lr--open .lr__toggle {
+  left: 292px;         /* ≈ ancho de burbuja (320) - margen; ajusta si quieres */
 }
 
 /* Burbuja flotante */
@@ -156,7 +162,7 @@ input:focus, select:focus, textarea:focus{
   position: absolute;
   top: 0;
   left: 0;
-  width: 320px;                  /* ancho de la burbuja */
+  width: 320px;
   background: #1b1f22;
   color: #e9ecef;
   border: 1px solid #2b3035;
@@ -164,21 +170,33 @@ input:focus, select:focus, textarea:focus{
   padding: 12px 14px 14px 14px;
   box-shadow: 0 12px 24px rgba(0,0,0,.22);
 
-  /* escondida por defecto, solo se asoma 8px (la flecha) */
-  transform: translateX(calc(-100% + 60px));
+  transform: translateX(calc(-100% + 60px)); /* solo asoma la flecha */
   opacity: 0;
   pointer-events: none;
   transition: transform 240ms ease, opacity 200ms ease;
+  z-index: 1;          /* por debajo del botón */
 }
 
-/* cuando está abierta, aparece completa */
+/* abierta = visible completa */
 .lr--open .lr__bubble {
   transform: translateX(8px);
   opacity: 1;
   pointer-events: auto;
 }
 
-/* tipografía y detalles */
+/* Imagen arriba (opcional) */
+.lr__imgWrap {
+  overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+.lr__img {
+  display: block;
+  width: 100%;
+  height: 140px;       /* puedes cambiar a 120/160 */
+  object-fit: cover;
+}
+
 .lr__title {
   font-size: .9rem;
   font-weight: 700;
@@ -203,8 +221,9 @@ input:focus, select:focus, textarea:focus{
 }
 .lr__link:hover { text-decoration: underline; }
 
-/* en pantallas estrechas, mantenla cerrada por defecto y más compacta */
+/* en pantallas estrechas, compacta un poco */
 @media (max-width: 992px) {
   .lr { top: 84px; }
   .lr__bubble { width: 280px; }
+  .lr--open .lr__toggle { left: 252px; } /* acompasa el ancho menor */
 }
