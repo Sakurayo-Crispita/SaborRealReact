@@ -310,3 +310,58 @@ main{ padding-top:8px; }
 @media (max-width:560px){
   .site-header__right{ flex-wrap:wrap; gap:8px; }
 }
+/* Enlace de salto (se muestra al enfocar con Tab) */
+.skip-link{
+  position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;
+}
+.skip-link:focus{
+  left:16px; top:12px; width:auto; height:auto; background:#111; color:#fff;
+  padding:8px 12px; border-radius:8px; z-index:2001;
+}
+
+/* Foco visible consistente */
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline: 3px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Región viva oculta (para mensajes accesibles) */
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* Respeta usuarios con “Reducir movimiento” */
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+}
+/* ===== Accesibilidad: enlace de salto ===== */
+.skiplink{
+  position:absolute; left:-999px; top:auto; width:1px; height:1px; overflow:hidden;
+}
+.skiplink:focus{
+  position:static; width:auto; height:auto; padding:6px 10px;
+  background:#111; color:#fff; border-radius:8px; z-index:10000;
+}
+
+/* ===== Accesibilidad: foco visible coherente ===== */
+:focus-visible{
+  outline: 3px solid #8b5cf6;
+  outline-offset: 2px;
+}
+.avatarchip:focus-visible{ outline: 3px solid #8b5cf6; outline-offset: 2px; }
+
+/* ===== Botones deshabilitados con contraste suficiente ===== */
+button:disabled, .btn:disabled{
+  opacity: 0.7;
+  filter: grayscale(0);            /* no apagar demasiado el contraste */
+}
+
+/* ===== Estados de error legibles ===== */
+.form-error{
+  color: #b91c1c;                  /* rojo accesible */
+  font-weight: 600;
+}
+
+/* ===== Imágenes de avatar redondas sin deformar ===== */
+.avatarchip__img img{ width:100%; height:100%; object-fit:cover; border-radius:50%; }

@@ -1,5 +1,5 @@
 // src/ProductoCard.jsx
-import { useEffect, useState, useId } from 'react';
+import { useEffect, useState, useId, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { apix } from './api/api';
 import { useAuth } from './AuthContext.jsx';
@@ -22,6 +22,12 @@ export default function ProductoCard({ p }) {
   const idText = useId();
   const idRating = useId();
 
+  // Formateador a PEN
+  const PEN = useMemo(
+    () => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }),
+    []
+  );
+
   function clampStar(n) {
     const x = Number(n);
     return Number.isFinite(x) ? Math.min(5, Math.max(1, Math.trunc(x))) : 5;
@@ -31,9 +37,7 @@ export default function ProductoCard({ p }) {
     try {
       const data = await apix.getComentarios(p._id);
       setComentarios(Array.isArray(data) ? data : []);
-    } catch {
-      /* opcional: setMsg('No se pudieron cargar los comentarios') */
-    }
+    } catch {/* opcional */}
   }
   useEffect(() => { cargarComentarios(); }, [p._id]);
 
@@ -57,6 +61,7 @@ export default function ProductoCard({ p }) {
     }
 
     const r = clampStar(rating);
+    // CP13: bloquear 0⭐ o 6⭐ explícitamente
     if (r < 1 || r > 5) {
       setMsg('La puntuación debe estar entre 1 y 5 estrellas.');
       return;
@@ -78,7 +83,6 @@ export default function ProductoCard({ p }) {
 
   async function handleAdd() {
     if (!token) {
-      // recuerda desde dónde vino para volver después del login
       nav('/login', { state: { from: loc }, replace: true });
       return;
     }
@@ -125,7 +129,7 @@ export default function ProductoCard({ p }) {
         </p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div className="price">${precio.toFixed(2)}</div>
+          <div className="price">{PEN.format(precio)}</div>
           <button className="btn btn-primary" onClick={handleAdd} disabled={busyAdd} aria-label={`Añadir ${nombre} al ticket`}>
             {busyAdd ? 'Añadiendo…' : 'Añadir al ticket'}
           </button>

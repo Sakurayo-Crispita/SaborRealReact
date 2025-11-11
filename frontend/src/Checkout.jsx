@@ -21,6 +21,12 @@ export default function Checkout() {
   const [msg, setMsg] = useState("");
   const [errors, setErrors] = useState({});
 
+  // Formateador PEN (Perú)
+  const PEN = useMemo(
+    () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
+    []
+  );
+
   const cartEmpty = items.length === 0;
 
   function onChange(e) {
@@ -30,9 +36,9 @@ export default function Checkout() {
   }
 
   const canSubmit = useMemo(() => {
-    if (submitting || cartEmpty) return false;
+    if (submitting || cartEmpty) return false;                      // CP15
     if (!form.delivery_nombre.trim()) return false;
-    if (!TEL_RGX.test(form.delivery_telefono.trim())) return false;
+    if (!TEL_RGX.test(form.delivery_telefono.trim())) return false; // CP14
     if (form.delivery_direccion.trim().length < 5) return false;
     return true;
   }, [submitting, cartEmpty, form]);
@@ -44,7 +50,7 @@ export default function Checkout() {
 
     if (!form.delivery_nombre.trim()) local.delivery_nombre = "Ingresa tu nombre.";
     if (!TEL_RGX.test(form.delivery_telefono.trim()))
-      local.delivery_telefono = "Teléfono inválido (usa dígitos, +, espacios o guiones).";
+      local.delivery_telefono = "Teléfono inválido (usa dígitos, +, espacios o guiones)."; // CP14
     if (form.delivery_direccion.trim().length < 5)
       local.delivery_direccion = "Dirección muy corta.";
 
@@ -52,7 +58,7 @@ export default function Checkout() {
       setErrors(local);
       return;
     }
-    if (cartEmpty) {
+    if (cartEmpty) {                                               // CP15
       setMsg("Tu ticket está vacío.");
       return;
     }
@@ -108,8 +114,8 @@ export default function Checkout() {
                 <tr key={it._id || it.id}>
                   <td>{nombre}</td>
                   <td align="center">{it.qty}</td>
-                  <td align="right">${precio.toFixed(2)}</td>
-                  <td align="right">${(precio * it.qty).toFixed(2)}</td>
+                  <td align="right">{PEN.format(precio)}</td>
+                  <td align="right">{PEN.format(precio * it.qty)}</td>
                 </tr>
               );
             })}
@@ -120,7 +126,7 @@ export default function Checkout() {
                 <b>Total</b>
               </td>
               <td align="right">
-                <b aria-live="polite">${total.toFixed(2)}</b>
+                <b aria-live="polite">{PEN.format(total)}</b>
               </td>
             </tr>
           </tfoot>
@@ -141,6 +147,7 @@ export default function Checkout() {
             placeholder="Nombre"
             autoComplete="name"
             required
+            spellCheck={false}
           />
           {errors.delivery_nombre && <div className="form-error">{errors.delivery_nombre}</div>}
         </div>
@@ -155,7 +162,10 @@ export default function Checkout() {
             value={form.delivery_telefono}
             onChange={onChange}
             placeholder="+51 999 888 777"
+            pattern="[\d+\-\s]{6,20}"
             required
+            aria-invalid={Boolean(errors.delivery_telefono)}
+            spellCheck={false}
           />
           {errors.delivery_telefono && <div className="form-error">{errors.delivery_telefono}</div>}
         </div>
@@ -170,6 +180,7 @@ export default function Checkout() {
             placeholder="Dirección"
             autoComplete="street-address"
             required
+            spellCheck={false}
           />
           {errors.delivery_direccion && <div className="form-error">{errors.delivery_direccion}</div>}
         </div>
@@ -183,10 +194,16 @@ export default function Checkout() {
             onChange={onChange}
             placeholder="Notas (opcional)"
             maxLength={200}
+            spellCheck={false}
           />
         </div>
 
-        <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          disabled={!canSubmit}
+          aria-disabled={!canSubmit}
+        >
           {submitting ? "Creando…" : "Confirmar pedido"}
         </button>
 
@@ -201,10 +218,10 @@ export default function Checkout() {
         <div style={{ marginTop: 16 }} role="region" aria-label="Pedido creado">
           <b>¡Pedido creado!</b>
           <div>Código: {done.code}</div>
-          <div>Total: ${Number(done.total).toFixed(2)}</div>
+          <div>Total: {PEN.format(Number(done.total))}</div>
           <div>Estado: {done.status}</div>
           <div>
-            Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString()}
+            Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString("es-PE")}
           </div>
         </div>
       )}

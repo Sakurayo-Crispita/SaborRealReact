@@ -49,15 +49,14 @@ export default function ProfileModal({ open, onClose }) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      setMsg('El archivo debe ser una imagen.'); 
+      setMsg('El archivo debe ser una imagen.');
       return;
     }
     const dataUrl = await compressImage(file, 384, 0.72); // ~150–200 KB
     setAvatar(dataUrl); // previsualiza la versión comprimida
   };
 
-
-// Dentro de ProfileModal.jsx
+  // Guardar perfil (envía solo campos soportados + avatarUrl si aplica)
   const saveProfile = async () => {
     setBusy(true); setMsg('');
     try {
@@ -69,16 +68,16 @@ export default function ProfileModal({ open, onClose }) {
         fecha_nacimiento: form.fecha_nacimiento || undefined,
       };
 
-      // Si hay avatar en dataURL y es razonable, lo enviamos
       if (avatar && avatar.startsWith('data:image/') && avatar.length < 250_000) {
         payload.avatarUrl = avatar;
       }
 
-      const updated = await apix.updateProfile(token, payload);
+      await apix.updateProfile(token, payload);
 
-      // refrescar usuario en header
-      setUser?.(prev => ({ ...prev, ...updated }));
-      localStorage.setItem('sr_user', JSON.stringify({ ...(JSON.parse(localStorage.getItem('sr_user')||'{}')), ...updated }));
+      // Refrescar /me para tener un user consistente (incluye avatarUrl si el backend lo guarda)
+      const fresh = await apix.me(token);
+      setUser?.(fresh);
+      localStorage.setItem('sr_user', JSON.stringify(fresh));
 
       setMsg('✅ Perfil actualizado.');
     } catch (e) {
@@ -109,7 +108,6 @@ export default function ProfileModal({ open, onClose }) {
     const dataUrl = canvas.toDataURL('image/jpeg', quality);
     return dataUrl;
   }
-
 
   const changePassword = async () => {
     setBusy(true);
