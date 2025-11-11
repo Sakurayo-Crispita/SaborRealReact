@@ -14,7 +14,7 @@ function fileToDataURL(file) {
 }
 
 export default function ProfileModal({ open, onClose }) {
-  const { token, user, email } = useAuth(); // user puede venir de localStorage
+  const { token, user, email, setUser } = useAuth(); // user puede venir de localStorage
   const [form, setForm] = useState({
     nombre: user?.nombre ?? "",
     telefono: user?.telefono ?? "",
@@ -40,7 +40,7 @@ export default function ProfileModal({ open, onClose }) {
         genero: user?.genero ?? "na",
         fecha_nacimiento: user?.fecha_nacimiento ?? "",
       });
-      setAvatar("");
+      setAvatar(user?.avatarUrl || "");
       setMsg("");
     }
   }, [open, user]);
@@ -48,45 +48,67 @@ export default function ProfileModal({ open, onClose }) {
   const onPickAvatar = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setMsg("El archivo debe ser una imagen.");
+    if (!file.type.startsWith('image/')) {
+      setMsg('El archivo debe ser una imagen.'); 
       return;
     }
-    const dataUrl = await fileToDataURL(file);
-    setAvatar(dataUrl); // solo vista previa (no se envía al backend)
+    const dataUrl = await compressImage(file, 384, 0.72); // ~150–200 KB
+    setAvatar(dataUrl); // previsualiza la versión comprimida
   };
+
 
 // Dentro de ProfileModal.jsx
   const saveProfile = async () => {
-    setBusy(true);
-    setMsg("");
+    setBusy(true); setMsg('');
     try {
-      // 1) Construir payload SOLO con campos soportados por el backend
       const payload = {
-        // usa español si existe; si no, mapea desde tus claves en inglés
-        nombre: form.nombre ?? form.name ?? undefined,
-        telefono: form.telefono ?? form.phone ?? undefined,
-        direccion: form.direccion ?? form.address ?? undefined,
-        genero: form.genero ?? form.gender ?? undefined,
-        fecha_nacimiento: form.fecha_nacimiento ?? form.birthdate ?? undefined,
-        avatarUrl: avatar || null, // <-- IMPORTANTE: envía el avatar (data URL) si lo cambiaste
+        nombre: form.nombre || undefined,
+        telefono: form.telefono || undefined,
+        direccion: form.direccion || undefined,
+        genero: form.genero || undefined,
+        fecha_nacimiento: form.fecha_nacimiento || undefined,
       };
 
-      // 2) Guardar en backend (PUT /api/auth/me) y recibir perfil consistente
-      const updated = await apix.updateProfile(token, payload); // debe devolver el perfil
+      // Si hay avatar en dataURL y es razonable, lo enviamos
+      if (avatar && avatar.startsWith('data:image/') && avatar.length < 250_000) {
+        payload.avatarUrl = avatar;
+      }
 
-      // 3) Refrescar estado global y storage para que el header cambie
-      //    (useAuth debe exponer setUser)
+      const updated = await apix.updateProfile(token, payload);
+
+      // refrescar usuario en header
       setUser?.(prev => ({ ...prev, ...updated }));
-      localStorage.setItem("sr_user", JSON.stringify({ ...(JSON.parse(localStorage.getItem("sr_user")||"{}")), ...updated }));
+      localStorage.setItem('sr_user', JSON.stringify({ ...(JSON.parse(localStorage.getItem('sr_user')||'{}')), ...updated }));
 
-      setMsg("✅ Perfil actualizado."); 
+      setMsg('✅ Perfil actualizado.');
     } catch (e) {
-      setMsg("❌ No se pudo actualizar el perfil.");
+      setMsg('❌ No se pudo actualizar el perfil.');
     } finally {
       setBusy(false);
     }
   };
+
+  async function compressImage(file, maxSize = 384, quality = 0.7) {
+    const img = await new Promise((res, rej) => {
+      const url = URL.createObjectURL(file);
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = rej;
+      i.src = url;
+    });
+
+    const canvas = document.createElement('canvas');
+    const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+    canvas.width = Math.round(img.width * ratio);
+    canvas.height = Math.round(img.height * ratio);
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // JPEG para recortar peso
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    return dataUrl;
+  }
 
 
   const changePassword = async () => {

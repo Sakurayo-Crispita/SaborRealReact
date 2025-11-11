@@ -38,7 +38,7 @@ class ProfileUpdate(BaseModel):
     direccion: Optional[str] = None
     genero: Optional[str] = None            # opcional, si quieres almacenarlo
     fecha_nacimiento: Optional[str] = None  # opcional, formato 'YYYY-MM-DD'
-    avatarUrl: Optional[str] = None
+    avatarUrl: Optional[str] = Field(default=None, max_length=300_000)
 
 class PasswordChange(BaseModel):
     current_password: str
