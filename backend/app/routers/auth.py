@@ -38,6 +38,7 @@ class ProfileUpdate(BaseModel):
     direccion: Optional[str] = None
     genero: Optional[str] = None            # opcional, si quieres almacenarlo
     fecha_nacimiento: Optional[str] = None  # opcional, formato 'YYYY-MM-DD'
+    avatarUrl: Optional[str] = None
 
 class PasswordChange(BaseModel):
     current_password: str
@@ -123,25 +124,38 @@ async def me(user = Depends(get_current_user)):
         "rol": user.get("rol", "customer"),
         "telefono": user.get("telefono"),
         "direccion": user.get("direccion"),
+        "avatarUrl": user.get("avatarUrl"),     # <<--- NUEVO
+        "genero": user.get("genero"),
+        "fecha_nacimiento": user.get("fecha_nacimiento"),
     }
 
 @router.put("/me")
 async def update_me(payload: ProfileUpdate, user = Depends(get_current_user)):
     uid = ObjectId(user["_id"])
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
 
-    # Sólo actualiza los campos que llegan
-    upd = {k: v for k, v in payload.dict().items() if v is not None}
-    if not upd:
-        return {"ok": True, "modified": 0}
+    if updates:
+        res = await database.db.clientes.update_one({"_id": uid}, {"$set": updates})
+        if not res.acknowledged:
+            raise HTTPException(status_code=500, detail="No se pudo actualizar el perfil")
 
-    # Si no quieres guardar ciertos campos, elimínalos:
-    # for k in ["genero", "fecha_nacimiento"]:
-    #     upd.pop(k, None)
+    # vuelve a leer y devuelve el perfil completo y consistente con GET /me
+    u = await database.db.clientes.find_one({"_id": uid})
+    if not u:
+        raise HTTPException(status_code=500, detail="Usuario no encontrado tras update")
 
-    res = await database.db.clientes.update_one({"_id": uid}, {"$set": upd})
-    if not res.acknowledged:
-        raise HTTPException(status_code=500, detail="No se pudo actualizar el perfil")
-    return {"ok": True, "modified": res.modified_count}
+    return {
+        "_id": str(u["_id"]),
+        "email": u["email"],
+        "nombre": u.get("nombre"),
+        "rol": u.get("rol", "customer"),
+        "telefono": u.get("telefono"),
+        "direccion": u.get("direccion"),
+        "avatarUrl": u.get("avatarUrl"),
+        "genero": u.get("genero"),
+        "fecha_nacimiento": u.get("fecha_nacimiento"),
+    }
+
 
 @router.patch("/change-password")
 async def change_password(payload: PasswordChange, user = Depends(get_current_user)):

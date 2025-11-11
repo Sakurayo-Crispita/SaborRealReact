@@ -62,15 +62,16 @@ export const apix = {
   },
 
   /** CAMBIAR PASSWORD (corregido) */
-  changePassword(token, currentPassword, newPassword) {
+  changePassword(token, a, b) {
+    const body = (typeof a === "object" && a !== null)
+      ? { current_password: a.oldPassword, new_password: a.newPassword }
+      : { current_password: a, new_password: b };
+
     return handle(() =>
       api("/api/auth/change-password", {
         method: "PATCH",
         headers: { ...authHeader(token) },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
+        body: JSON.stringify(body),
       })
     );
   },
