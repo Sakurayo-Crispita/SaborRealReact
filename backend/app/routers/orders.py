@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime, timezone
 from bson import ObjectId
 from typing import Any
+import re
 
 
 from .. import database
@@ -58,6 +59,14 @@ async def _calc_total_snapshot_and_reserve(items: list[CartItem]) -> tuple[float
 async def create_order(payload: OrderCreate, user_id: str = Depends(get_current_user_id)):
     if not payload.items:
         raise HTTPException(400, "Carrito vacío")
+
+    TEL_RGX = re.compile(r"^[\d+\-\s]{6,20}$")
+    if not payload.delivery_nombre or not payload.delivery_nombre.strip():
+        raise HTTPException(status_code=422, detail="Nombre de entrega requerido")
+    if not TEL_RGX.match((payload.delivery_telefono or "").strip()):
+        raise HTTPException(status_code=422, detail="Teléfono inválido")
+    if not payload.delivery_direccion or len(payload.delivery_direccion.strip()) < 5:
+        raise HTTPException(status_code=422, detail="Dirección muy corta")
 
     total, items_snapshot = await _calc_total_snapshot_and_reserve(payload.items)
 

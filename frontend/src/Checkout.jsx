@@ -1,38 +1,75 @@
-import { useState } from 'react';
-import { useAuth } from './AuthContext.jsx';
-import { useCart } from './CartContext.jsx';
-import { apix } from './api/api';
+// src/Checkout.jsx
+import { useMemo, useState } from "react";
+import { useAuth } from "./AuthContext.jsx";
+import { useCart } from "./CartContext.jsx";
+import { apix } from "./api/api";
+
+const TEL_RGX = /^[\d+\-\s]{6,20}$/;
 
 export default function Checkout() {
   const { token, isAuthenticated } = useAuth();
   const { items, total, clear } = useCart();
-  const [form, setForm] = useState({
-    delivery_nombre: '',
-    delivery_telefono: '',
-    delivery_direccion: '',
-    notas: '',
-  });
-  const [done, setDone] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
 
-  function onChange(e){ setForm({ ...form, [e.target.name]: e.target.value }); }
+  const [form, setForm] = useState({
+    delivery_nombre: "",
+    delivery_telefono: "",
+    delivery_direccion: "",
+    notas: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [errors, setErrors] = useState({});
+
+  const cartEmpty = items.length === 0;
+
+  function onChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+    setErrors((err) => ({ ...err, [e.target.name]: null }));
+    setMsg("");
+  }
+
+  const canSubmit = useMemo(() => {
+    if (submitting || cartEmpty) return false;
+    if (!form.delivery_nombre.trim()) return false;
+    if (!TEL_RGX.test(form.delivery_telefono.trim())) return false;
+    if (form.delivery_direccion.trim().length < 5) return false;
+    return true;
+  }, [submitting, cartEmpty, form]);
 
   async function submit(e) {
     e.preventDefault();
-    if (!isAuthenticated) { alert('Inicia sesión'); return; }
-    if (items.length === 0) { alert('Tu ticket está vacío'); return; }
-    if (!form.delivery_nombre || !form.delivery_direccion) {
-      alert('Nombre y dirección son obligatorios');
+    setMsg("");
+    const local = {};
+
+    if (!form.delivery_nombre.trim()) local.delivery_nombre = "Ingresa tu nombre.";
+    if (!TEL_RGX.test(form.delivery_telefono.trim()))
+      local.delivery_telefono = "Teléfono inválido (usa dígitos, +, espacios o guiones).";
+    if (form.delivery_direccion.trim().length < 5)
+      local.delivery_direccion = "Dirección muy corta.";
+
+    if (Object.keys(local).length) {
+      setErrors(local);
+      return;
+    }
+    if (cartEmpty) {
+      setMsg("Tu ticket está vacío.");
+      return;
+    }
+    if (!isAuthenticated) {
+      setMsg("Debes iniciar sesión para confirmar el pedido.");
       return;
     }
 
-    // Construye el payload que espera /api/orders
     const payload = {
-      items: items.map(it => ({ producto_id: it._id || it.id, qty: Number(it.qty) || 1 })),
-      delivery_nombre: form.delivery_nombre || 'Cliente',
-      delivery_telefono: form.delivery_telefono || '',
-      delivery_direccion: form.delivery_direccion || '',
-      notas: form.notas || '',
+      items: items.map((it) => ({
+        producto_id: it._id || it.id,
+        qty: Number(it.qty) || 1,
+      })),
+      delivery_nombre: form.delivery_nombre.trim(),
+      delivery_telefono: form.delivery_telefono.trim(),
+      delivery_direccion: form.delivery_direccion.trim(),
+      notas: form.notas?.trim() || "",
     };
 
     try {
@@ -40,23 +77,32 @@ export default function Checkout() {
       const o = await apix.createOrder(token, payload);
       setDone(o);
       clear();
+      setForm({ delivery_nombre: "", delivery_telefono: "", delivery_direccion: "", notas: "" });
+      setMsg("✅ ¡Pedido confirmado!");
     } catch (err) {
-      console.error(err);
-      alert(err?.message || 'No se pudo crear el pedido');
+      setMsg(`❌ No se pudo crear el pedido: ${err?.message || "error de red"}`);
     } finally {
       setSubmitting(false);
     }
   }
 
   return (
-    <main style={{maxWidth:800, margin:'2rem auto', padding:'0 1rem', color:'#eee'}}>
+    <main style={{ maxWidth: 880, margin: "2rem auto", padding: "0 1rem" }}>
       <h2>Ticket</h2>
-      {items.length === 0 ? <p>No hay productos en tu ticket.</p> : (
-        <table style={{width:'100%', borderCollapse:'collapse', marginBottom:16}}>
-          <thead><tr><th align="left">Producto</th><th>Qty</th><th>Precio</th><th>Subtotal</th></tr></thead>
+
+      {items.length ? (
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+          <thead>
+            <tr>
+              <th align="left">Producto</th>
+              <th>Qty</th>
+              <th>Precio</th>
+              <th>Subtotal</th>
+            </tr>
+          </thead>
           <tbody>
-            {items.map(it => {
-              const nombre = it.nombre ?? it.title ?? 'Producto';
+            {items.map((it) => {
+              const nombre = it.nombre ?? it.title ?? "Producto";
               const precio = Number(it.precio ?? it.price ?? 0);
               return (
                 <tr key={it._id || it.id}>
@@ -70,31 +116,96 @@ export default function Checkout() {
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={3} align="right"><b>Total</b></td>
-              <td align="right"><b>${total.toFixed(2)}</b></td>
+              <td colSpan={3} align="right">
+                <b>Total</b>
+              </td>
+              <td align="right">
+                <b aria-live="polite">${total.toFixed(2)}</b>
+              </td>
             </tr>
           </tfoot>
         </table>
+      ) : (
+        <p>Tu ticket está vacío.</p>
       )}
 
       <h3>Datos de entrega</h3>
-      <form onSubmit={submit} style={{display:'grid', gap:8, maxWidth:480}}>
-        <input name="delivery_nombre" required value={form.delivery_nombre} onChange={onChange} placeholder="Nombre" />
-        <input name="delivery_telefono" type="tel" inputMode="numeric" pattern="[0-9+\- ]{6,}" value={form.delivery_telefono} onChange={onChange} placeholder="Teléfono" />
-        <input name="delivery_direccion" required value={form.delivery_direccion} onChange={onChange} placeholder="Dirección" />
-        <textarea name="notas" value={form.notas} onChange={onChange} placeholder="Notas (opcional)" />
-        <button type="submit" disabled={items.length===0 || submitting}>
-          {submitting ? 'Creando…' : 'Confirmar pedido'}
+      <form onSubmit={submit} noValidate style={{ display: "grid", gap: 8, maxWidth: 520 }}>
+        <div className="form__grp">
+          <label htmlFor="ck-name">Nombre</label>
+          <input
+            id="ck-name"
+            name="delivery_nombre"
+            value={form.delivery_nombre}
+            onChange={onChange}
+            placeholder="Nombre"
+            autoComplete="name"
+            required
+          />
+          {errors.delivery_nombre && <div className="form-error">{errors.delivery_nombre}</div>}
+        </div>
+
+        <div className="form__grp">
+          <label htmlFor="ck-tel">Teléfono</label>
+          <input
+            id="ck-tel"
+            name="delivery_telefono"
+            type="tel"
+            inputMode="tel"
+            value={form.delivery_telefono}
+            onChange={onChange}
+            placeholder="+51 999 888 777"
+            required
+          />
+          {errors.delivery_telefono && <div className="form-error">{errors.delivery_telefono}</div>}
+        </div>
+
+        <div className="form__grp">
+          <label htmlFor="ck-addr">Dirección</label>
+          <input
+            id="ck-addr"
+            name="delivery_direccion"
+            value={form.delivery_direccion}
+            onChange={onChange}
+            placeholder="Dirección"
+            autoComplete="street-address"
+            required
+          />
+          {errors.delivery_direccion && <div className="form-error">{errors.delivery_direccion}</div>}
+        </div>
+
+        <div className="form__grp">
+          <label htmlFor="ck-notes">Notas (opcional)</label>
+          <textarea
+            id="ck-notes"
+            name="notas"
+            value={form.notas}
+            onChange={onChange}
+            placeholder="Notas (opcional)"
+            maxLength={200}
+          />
+        </div>
+
+        <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+          {submitting ? "Creando…" : "Confirmar pedido"}
         </button>
+
+        {msg && (
+          <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
+            {msg}
+          </div>
+        )}
       </form>
 
       {done && (
-        <div style={{marginTop:16, padding:12, border:'1px solid #2a2a2a', borderRadius:8}}>
-          <b>¡Pedido creado!</b><br/>
-          Código: {done.code}<br/>
-          Total: ${Number(done.total).toFixed(2)}<br/>
-          Estado: {done.status}<br/>
-          Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString()}
+        <div style={{ marginTop: 16 }} role="region" aria-label="Pedido creado">
+          <b>¡Pedido creado!</b>
+          <div>Código: {done.code}</div>
+          <div>Total: ${Number(done.total).toFixed(2)}</div>
+          <div>Estado: {done.status}</div>
+          <div>
+            Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString()}
+          </div>
         </div>
       )}
     </main>
