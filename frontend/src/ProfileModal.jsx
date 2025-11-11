@@ -56,28 +56,29 @@ export default function ProfileModal({ open, onClose }) {
     setAvatar(dataUrl); // solo vista previa (no se envía al backend)
   };
 
+// Dentro de ProfileModal.jsx
   const saveProfile = async () => {
     setBusy(true);
     setMsg("");
     try {
-      // Solo mandamos campos soportados por el backend
+      // 1) Construir payload SOLO con campos soportados por el backend
       const payload = {
-        nombre: form.nombre || undefined,
-        telefono: form.telefono || undefined,
-        direccion: form.direccion || undefined,
-        genero: form.genero || undefined,
-        fecha_nacimiento: form.fecha_nacimiento || undefined,
+        // usa español si existe; si no, mapea desde tus claves en inglés
+        nombre: form.nombre ?? form.name ?? undefined,
+        telefono: form.telefono ?? form.phone ?? undefined,
+        direccion: form.direccion ?? form.address ?? undefined,
+        genero: form.genero ?? form.gender ?? undefined,
+        fecha_nacimiento: form.fecha_nacimiento ?? form.birthdate ?? undefined,
+        avatarUrl: avatar || null, // <-- IMPORTANTE: envía el avatar (data URL) si lo cambiaste
       };
 
-      await apix.updateProfile(token, payload);
+      // 2) Guardar en backend (PUT /api/auth/me) y recibir perfil consistente
+      const updated = await apix.updateProfile(token, payload); // debe devolver el perfil
 
-      // Refrescar datos de /me y persistirlos
-      try {
-        const me = await apix.me(token);
-        localStorage.setItem("sr_user", JSON.stringify(me));
-      } catch {
-        /* opcional: manejar error de refresco */
-      }
+      // 3) Refrescar estado global y storage para que el header cambie
+      //    (useAuth debe exponer setUser)
+      setUser?.(prev => ({ ...prev, ...updated }));
+      localStorage.setItem("sr_user", JSON.stringify({ ...(JSON.parse(localStorage.getItem("sr_user")||"{}")), ...updated }));
 
       setMsg("✅ Perfil actualizado.");
     } catch (e) {
@@ -86,6 +87,7 @@ export default function ProfileModal({ open, onClose }) {
       setBusy(false);
     }
   };
+
 
   const changePassword = async () => {
     setBusy(true);

@@ -139,6 +139,11 @@ async def update_me(payload: ProfileUpdate, user = Depends(get_current_user)):
         if not res.acknowledged:
             raise HTTPException(status_code=500, detail="No se pudo actualizar el perfil")
 
+    # justo después de construir `updates`
+    if updates.get("avatarUrl") and str(updates["avatarUrl"]).startswith("data:image"):
+        if len(updates["avatarUrl"]) > 1_000_000:  # ~1MB en caracteres
+            raise HTTPException(status_code=413, detail="Avatar demasiado grande")
+
     # vuelve a leer y devuelve el perfil completo y consistente con GET /me
     u = await database.db.clientes.find_one({"_id": uid})
     if not u:
