@@ -12,8 +12,10 @@ import Checkout from './Checkout.jsx';
 import ProfileModal from './ProfileModal.jsx'; // <-- NUEVO
 
 function Header({ onOpenProfile }) {
-  const { isAuthenticated, email, logout } = useAuth();
+  const { isAuthenticated, firstName, user, logout } = useAuth();
   const { items, total } = useCart();
+  const avatarUrl = user?.avatarUrl || null;
+  const initial = (firstName || 'U')[0]?.toUpperCase();
 
   return (
     <header className="site-header">
@@ -28,7 +30,16 @@ function Header({ onOpenProfile }) {
       <div className="site-header__right">
         {isAuthenticated ? (
           <>
-            <small>Hola, {email}</small>
+            <div className="avatarchip" onClick={onOpenProfile} role="button" tabIndex={0}
+                 title="Abrir perfil"
+                 onKeyDown={(e)=> (e.key==='Enter'||e.key===' ') && onOpenProfile()}>
+              <div className="avatarchip__img">
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="Avatar" />
+                  : <span className="avatarchip__ph">{initial}</span>}
+              </div>
+              <span className="avatarchip__label">Hola, {firstName}</span>
+            </div>
             <button className="btn btn-accent" onClick={onOpenProfile}>Mi perfil</button>
             <button className="btn btn-primary" onClick={logout}>Salir</button>
           </>

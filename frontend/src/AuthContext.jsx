@@ -6,21 +6,40 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);          // <-- NUEVO
+  const [user, setUser] = useState(null);   // /me
   const [ready, setReady] = useState(false);
 
+  // Cargar token y user desde localStorage
   useEffect(() => {
     try {
       const t = localStorage.getItem('sr_token');
       const u = localStorage.getItem('sr_user');
-      const p = localStorage.getItem('sr_profile');       // <-- NUEVO
       if (t) setToken(t);
       if (u) setUser(JSON.parse(u));
-      if (p) setProfile(JSON.parse(p));                   // <-- NUEVO
     } catch {}
     setReady(true);
   }, []);
+
+  // Si hay token, refresca /me
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      if (!token) { setUser(null); return; }
+      try {
+        const me = await apix.me(token);
+        if (!alive) return;
+        setUser(me);
+        localStorage.setItem('sr_user', JSON.stringify(me));
+      } catch {
+        if (!alive) return;
+        setUser(null);
+        setToken(null);
+        localStorage.removeItem('sr_token');
+        localStorage.removeItem('sr_user');
+      }
+    })();
+    return () => { alive = false; };
+  }, [token]);
 
   async function login(email, password) {
     const data = await apix.login(email, password);
@@ -36,7 +55,6 @@ export function AuthProvider({ children }) {
       setUser(null);
       localStorage.removeItem('sr_user');
     }
-    // si tu /me retorna perfil, podrías setProfile(me.profile)
   }
 
   async function register(payload) {
@@ -45,22 +63,35 @@ export function AuthProvider({ children }) {
   }
 
   function logout() {
-    setToken(null);
-    setUser(null);
-    setProfile(null);                                     // <-- NUEVO
-    localStorage.removeItem('sr_token');
-    localStorage.removeItem('sr_user');
-    localStorage.removeItem('sr_profile');                // <-- NUEVO
-    localStorage.removeItem('sr_cart'); 
     const email = JSON.parse(localStorage.getItem('sr_user') || 'null')?.email;
     const key = `sr_cart_${email ?? 'anon'}`;
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem('sr_token');
+    localStorage.removeItem('sr_user');
+    localStorage.removeItem('sr_cart');
     localStorage.removeItem(key);
   }
 
-  // persiste el perfil cuando cambie
-  useEffect(() => {
-    if (profile) localStorage.setItem('sr_profile', JSON.stringify(profile));
-  }, [profile]);
+  // Guardar perfil (PUT /api/auth/me) y sincronizar header
+  async function saveProfile(patch) {
+    if (!token) return null;
+    const updated = await apix.updateProfile(token, patch);
+    setUser(updated);
+    localStorage.setItem('sr_user', JSON.stringify(updated));
+    return updated;
+  }
+
+  // Compat: alias “profile”/“setProfile”
+  function setProfile(next) {
+    setUser(next);
+    localStorage.setItem('sr_user', JSON.stringify(next));
+  }
+
+  const firstName =
+    (user?.nombre || '')
+      .trim()
+      .split(/\s+/)[0] || (user?.email ? user.email.split('@')[0] : null);
 
   const value = useMemo(
     () => ({
@@ -70,10 +101,14 @@ export function AuthProvider({ children }) {
       isAuthenticated: Boolean(token),
       authHeader: token ? `Bearer ${token}` : null,
       login, register, logout,
+      // perfil
+      profile: user,
+      setProfile,
+      saveProfile,
+      firstName,
       ready,
-      setUser,
     }),
-    [token, user, ready]
+    [token, user, firstName, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
