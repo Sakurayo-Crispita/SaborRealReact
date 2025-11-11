@@ -80,7 +80,7 @@ export default function ProfileModal({ open, onClose }) {
       setUser?.(prev => ({ ...prev, ...updated }));
       localStorage.setItem("sr_user", JSON.stringify({ ...(JSON.parse(localStorage.getItem("sr_user")||"{}")), ...updated }));
 
-      setMsg("✅ Perfil actualizado.");
+      setMsg("✅ Perfil actualizado."); 
     } catch (e) {
       setMsg("❌ No se pudo actualizar el perfil.");
     } finally {
