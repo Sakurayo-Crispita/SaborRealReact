@@ -9,12 +9,11 @@ export default function Orders() {
   const nav = useNavigate();
 
   const [orders, setOrders] = useState([]);
-  const [expanded, setExpanded] = useState({});          // {orderId: bool}
-  const [details, setDetails] = useState({});            // {orderId: detailObj}
+  const [expanded, setExpanded] = useState({});           // {orderId: bool}
+  const [details, setDetails] = useState({});             // {orderId: detailObj}
   const [loading, setLoading] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState({});// {orderId: bool}
+  const [loadingDetail, setLoadingDetail] = useState({}); // {orderId: bool}
   const [msg, setMsg] = useState("");
-  const [printId, setPrintId] = useState(null);          // <- para imprimir sólo una boleta
 
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
@@ -47,7 +46,7 @@ export default function Orders() {
     if (!details[id]) {
       try {
         setLoadingDetail(p => ({ ...p, [id]: true }));
-        const d = await apix.orderDetail(token, id);   // requiere apix.orderDetail en api.js
+        const d = await apix.orderDetail(token, id);   // asegúrate de tener apix.orderDetail
         setDetails(p => ({ ...p, [id]: d }));
       } catch {
         setMsg("No se pudo cargar el detalle del pedido.");
@@ -63,27 +62,6 @@ export default function Orders() {
     const s = String(status || "").toUpperCase();
     const map = { CREATED:"badge--created", PAID:"badge--paid", DELIVERED:"badge--delivered", CANCELLED:"badge--cancelled" };
     return <span className={`status-badge ${map[s] || "badge--created"}`}>{s || "CREATED"}</span>;
-  }
-
-  // Imprimir sólo la boleta visible de ese id
-  function printOrder(id) {
-    // si no está abierta, ábrela y vuelve a intentar
-    if (!expanded[id]) {
-      setExpanded(p => ({ ...p, [id]: true }));
-      setTimeout(() => printOrder(id), 220);
-      return;
-    }
-    setPrintId(id);
-
-    const el = document.getElementById(`receipt-${id}`);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    // dar tiempo a que se aplique la clase y el scroll
-    setTimeout(() => {
-      window.print();
-      // limpiar marca tras imprimir
-      setTimeout(() => setPrintId(null), 250);
-    }, 250);
   }
 
   return (
@@ -105,11 +83,7 @@ export default function Orders() {
           const d = details[id];
 
           return (
-            <article
-              id={`receipt-${id}`}
-              key={id}
-              className={`receipt card ${printId === id ? "print-target" : ""}`}
-            >
+            <article id={`receipt-${id}`} key={id} className="receipt card">
               <header className="receipt__header">
                 <div className="receipt__left">
                   <div className="receipt__brand">Sabor Real</div>
@@ -126,9 +100,6 @@ export default function Orders() {
                   <div className="receipt__actions">
                     <button className="btn btn-outline-secondary" onClick={() => toggle(o)}>
                       {open ? "Ocultar boleta" : "Ver boleta"}
-                    </button>
-                    <button className="btn btn-primary" onClick={() => printOrder(id)}>
-                      Imprimir
                     </button>
                   </div>
                 </div>
