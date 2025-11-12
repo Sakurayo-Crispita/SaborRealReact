@@ -9,10 +9,10 @@ export default function Orders() {
   const nav = useNavigate();
 
   const [orders, setOrders] = useState([]);
-  const [expanded, setExpanded] = useState({});        // {orderId: true|false}
-  const [details, setDetails] = useState({});          // {orderId: detailObj}
+  const [expanded, setExpanded] = useState({});         // {orderId: true|false}
+  const [details, setDetails] = useState({});           // {orderId: detailObj}
   const [loading, setLoading] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState({}); // {orderId: true|false}
+  const [loadingDetail, setLoadingDetail] = useState({});// {orderId: true|false}
   const [msg, setMsg] = useState("");
 
   const PEN = useMemo(
@@ -28,7 +28,7 @@ export default function Orders() {
         setLoading(true);
         const data = await apix.myOrders(token);
         if (alive) setOrders(Array.isArray(data) ? data : []);
-      } catch (e) {
+      } catch {
         setMsg("No se pudieron cargar tus pedidos.");
       } finally {
         setLoading(false);
@@ -38,48 +38,33 @@ export default function Orders() {
   }, [isAuthenticated, token, nav]);
 
   async function toggle(order) {
-    const id = order._id;
+    const id = order._id ?? order.id ?? order.code;
     const isOpen = !!expanded[id];
-    if (isOpen) {
-      setExpanded(prev => ({ ...prev, [id]: false }));
-      return;
-    }
-    // abrir: si no tenemos detalle, pedirlo
+    if (isOpen) { setExpanded(p => ({ ...p, [id]: false })); return; }
+
+    // Cargar detalle si no existe
     if (!details[id]) {
       try {
-        setLoadingDetail(prev => ({ ...prev, [id]: true }));
-        // GET /api/orders/{id} (tu backend lo tiene)
-        const res = await fetch(`/api/orders/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const d = await res.json();
-        setDetails(prev => ({ ...prev, [id]: d }));
+        setLoadingDetail(p => ({ ...p, [id]: true }));
+        const d = await apix.orderDetail(token, id);   // <-- API correcta
+        setDetails(p => ({ ...p, [id]: d }));
       } catch {
         setMsg("No se pudo cargar el detalle del pedido.");
+        return;
       } finally {
-        setLoadingDetail(prev => ({ ...prev, [id]: false }));
+        setLoadingDetail(p => ({ ...p, [id]: false }));
       }
     }
-    setExpanded(prev => ({ ...prev, [id]: true }));
+    setExpanded(p => ({ ...p, [id]: true }));
   }
 
   function badge(status) {
     const s = String(status || "").toUpperCase();
-    const map = {
-      CREATED: "badge--created",
-      PAID: "badge--paid",
-      DELIVERED: "badge--delivered",
-      CANCELLED: "badge--cancelled",
-    };
-    const cls = map[s] || "badge--created";
-    return <span className={`status-badge ${cls}`}>{s}</span>;
+    const map = { CREATED:"badge--created", PAID:"badge--paid", DELIVERED:"badge--delivered", CANCELLED:"badge--cancelled" };
+    return <span className={`status-badge ${map[s] || "badge--created"}`}>{s || "CREATED"}</span>;
   }
 
-  function printOrder(id) {
-    // Imprime la página (puedes usar un media print para estilizar la boleta)
-    window.print();
-  }
+  function printOrder() { window.print(); }
 
   return (
     <main id="main" style={{ maxWidth: 900, margin: "2rem auto", padding: "0 1rem" }}>
@@ -89,16 +74,14 @@ export default function Orders() {
       {msg && <p className="form-error" role="status">{msg}</p>}
 
       {!loading && orders.length === 0 && (
-        <div className="card" style={{ padding: 16 }}>
-          <p>No tienes pedidos.</p>
-        </div>
+        <div className="card" style={{ padding: 16 }}><p>No tienes pedidos.</p></div>
       )}
 
       <div className="receipt-list">
         {orders.map(o => {
-          const id = o._id ?? o.code;
+          const id = o._id ?? o.id ?? o.code;
           const open = !!expanded[id];
-          const created = new Date(o.createdAt ?? o.creadoAt ?? Date.now());
+          const created = new Date(o.createdAt ?? o.creadoAt ?? o.fecha ?? Date.now());
           const d = details[id];
 
           return (
@@ -120,9 +103,7 @@ export default function Orders() {
                     <button className="btn btn-outline-secondary" onClick={() => toggle(o)}>
                       {open ? "Ocultar boleta" : "Ver boleta"}
                     </button>
-                    <button className="btn btn-primary" onClick={() => printOrder(id)}>
-                      Imprimir
-                    </button>
+                    <button className="btn btn-primary" onClick={printOrder}>Imprimir</button>
                   </div>
                 </div>
               </header>
@@ -146,14 +127,20 @@ export default function Orders() {
                               </tr>
                             </thead>
                             <tbody>
-                              {d.items.map((it, idx) => (
-                                <tr key={idx}>
-                                  <td>{it.nombre ?? it.producto_id}</td>
-                                  <td align="center">{it.qty}</td>
-                                  <td align="right">{PEN.format(Number(it.precio ?? 0))}</td>
-                                  <td align="right">{PEN.format(Number(it.subtotal ?? (it.precio ?? 0) * it.qty))}</td>
-                                </tr>
-                              ))}
+                              {d.items.map((it, idx) => {
+                                const nombre = it.nombre ?? it.producto_nombre ?? it.producto_id ?? "Producto";
+                                const qty = Number(it.qty ?? it.cantidad ?? 1);
+                                const precio = Number(it.precio ?? it.producto_precio ?? 0);
+                                const subt = Number(it.subtotal ?? precio * qty);
+                                return (
+                                  <tr key={idx}>
+                                    <td>{nombre}</td>
+                                    <td align="center">{qty}</td>
+                                    <td align="right">{PEN.format(precio)}</td>
+                                    <td align="right">{PEN.format(subt)}</td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                             <tfoot>
                               <tr>
@@ -168,14 +155,16 @@ export default function Orders() {
                       )}
 
                       {/* Entrega */}
-                      {d.delivery && (
+                      {(d.delivery || d.entrega) && (
                         <div className="receipt__delivery">
                           <h4>Datos de entrega</h4>
                           <ul>
-                            <li><b>Nombre:</b> {d.delivery.nombre || "—"}</li>
-                            <li><b>Teléfono:</b> {d.delivery.telefono || "—"}</li>
-                            <li><b>Dirección:</b> {d.delivery.direccion || "—"}</li>
-                            {d.delivery.notas ? <li><b>Notas:</b> {d.delivery.notas}</li> : null}
+                            <li><b>Nombre:</b> {(d.delivery?.nombre ?? d.entrega?.nombre) || "—"}</li>
+                            <li><b>Teléfono:</b> {(d.delivery?.telefono ?? d.entrega?.telefono) || "—"}</li>
+                            <li><b>Dirección:</b> {(d.delivery?.direccion ?? d.entrega?.direccion) || "—"}</li>
+                            { (d.delivery?.notas ?? d.entrega?.notas) && (
+                              <li><b>Notas:</b> {d.delivery?.notas ?? d.entrega?.notas}</li>
+                            )}
                           </ul>
                         </div>
                       )}

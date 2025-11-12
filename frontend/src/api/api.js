@@ -43,15 +43,12 @@ export const apix = {
 
   me(token) {
     return handle(() =>
-      api("/api/auth/me", {
-        headers: { ...authHeader(token) },
-      })
+      api("/api/auth/me", { headers: { ...authHeader(token) } })
     );
   },
 
-  /** ACTUALIZAR PERFIL (corregido) */
+  /** ACTUALIZAR PERFIL */
   updateProfile(token, payload) {
-    // payload: { nombre?, telefono?, direccion?, genero?, fecha_nacimiento? }
     return handle(() =>
       api("/api/auth/me", {
         method: "PUT",
@@ -61,12 +58,11 @@ export const apix = {
     );
   },
 
-  /** CAMBIAR PASSWORD (corregido) */
+  /** CAMBIAR PASSWORD */
   changePassword(token, a, b) {
     const body = (typeof a === "object" && a !== null)
       ? { current_password: a.oldPassword, new_password: a.newPassword }
       : { current_password: a, new_password: b };
-
     return handle(() =>
       api("/api/auth/change-password", {
         method: "PATCH",
@@ -105,7 +101,14 @@ export const apix = {
   /* ========== Orders ========== */
   myOrders(token) {
     return handle(() =>
-      api("/api/orders", {
+      api("/api/orders", { headers: { ...authHeader(token) } })
+    );
+  },
+
+  /** NUEVO: detalle por id */
+  orderDetail(token, orderId) {
+    return handle(() =>
+      api(`/api/orders/${encodeURIComponent(orderId)}`, {
         headers: { ...authHeader(token) },
       })
     );
