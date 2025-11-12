@@ -434,18 +434,21 @@ function OrdersSectionGrouped({ token, onMsg }) {
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-  // Agrupar por cliente (nombre + teléfono)
+  // Agrupar por cliente (nombre + teléfono) — sin “Sin nombre”
   const groups = useMemo(() => {
     const map = new Map();
     for (const o of orders) {
       const d = o.delivery || {};
-      const key = `${(d.nombre || "Sin nombre").trim()}|${(d.telefono || "").trim()}`;
+      const name  = (d.nombre   || "").trim();
+      const phone = (d.telefono || "").trim();
+      const key = `${name}|${phone}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(o);
     }
     return Array.from(map.entries()).map(([key, arr]) => {
       const [nombre, telefono] = key.split("|");
       const total = arr.reduce((s, x) => s + Number(x.total || 0), 0);
+      // más recientes primero
       arr.sort((a,b) => new Date(b.creadoAt || b.createdAt) - new Date(a.creadoAt || a.createdAt));
       return { key, nombre, telefono, items: arr, total };
     });
@@ -480,7 +483,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
 
   async function openDetail(o) {
     try {
-      const full = await apix.adminOrderDetail(token, o._id); // <-- fetch detalle real
+      const full = await apix.adminOrderDetail(token, o._id); // <-- detalle real
       setDetailOrder(full);
       setDetailOpen(true);
     } catch (e) {
@@ -510,8 +513,15 @@ function OrdersSectionGrouped({ token, onMsg }) {
               onClick={() => toggleGroup(g.key)}
             >
               <div>
-                <strong>{g.nombre}</strong>{" "}
-                {g.telefono && <span className="hint">• {g.telefono}</span>}
+                {(() => {
+                  const title = (g.nombre && g.nombre.trim()) || (g.telefono && g.telefono.trim()) || "Órdenes";
+                  return (
+                    <>
+                      <strong>{title}</strong>
+                      {g.telefono && title !== g.telefono && <span className="hint"> • {g.telefono}</span>}
+                    </>
+                  );
+                })()}
               </div>
               <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <span className="hint">{g.items.length} pedido(s)</span>
