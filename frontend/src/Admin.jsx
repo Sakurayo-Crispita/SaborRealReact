@@ -32,6 +32,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
     precio: Number(initial?.precio ?? 0),
     categoria: initial?.categoria ?? "",
     disponible: Boolean(initial?.disponible ?? true),
+    descripcion: initial?.descripcion ?? "",
   });
 
   const [preview, setPreview] = useState(initial?.imagenUrl || ""); // dataURL o URL existente
@@ -46,6 +47,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
         precio: Number(initial?.precio ?? 0),
         categoria: initial?.categoria ?? "",
         disponible: Boolean(initial?.disponible ?? true),
+        descripcion: initial?.descripcion ?? "",
       });
       setPreview(initial?.imagenUrl || "");
       setPickedFile(null);
@@ -85,6 +87,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       precio,
       categoria: form.categoria?.trim() || null,
       disponible: !!form.disponible,
+      descripcion: form.descripcion?.trim() || null,
       // Si el admin eligió un archivo, mandamos la versión comprimida (dataURL)
       ...(preview && preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
       // Si no eligió archivo pero existía una imagen previa URL, mantenla:
@@ -150,6 +153,16 @@ function ProductModal({ open, onClose, initial, onSave }) {
                 placeholder="pan, postre, bebida…"
               />
             </div>
+            <div className="form__grp" style={{ gridColumn: "1 / -1" }}>
+            <label>Descripción</label>
+            <textarea
+            name="descripcion"
+            rows={3}
+            value={form.descripcion}
+            onChange={onChange}
+            placeholder="Descripción breve del producto"
+            />
+            </div>
 
             <div className="form__grp" style={{ alignItems: "center", flexDirection: "row", gap: 8 }}>
               <input id="chk-disp" type="checkbox" name="disponible" checked={form.disponible} onChange={onChange} />
@@ -207,17 +220,31 @@ export default function Admin() {
   function openCreate() { setEditing(null); setOpenModal(true); }
   function openEdit(p)  { setEditing(p);   setOpenModal(true); }
 
-  async function saveProduct(payload) {
-    try {
-      setMsg("");
-      await apix.adminUpsertProduct(token, payload);
-      setOpenModal(false);
-      await load();
-      setMsg("✅ Producto guardado.");
-    } catch (e) {
-      setMsg(`❌ No se pudo guardar: ${e.message || "error"}`);
+// dentro de Admin.jsx
+
+async function saveProduct(payload) {
+  try {
+    setMsg("");
+
+    // separa _id
+    const { _id, ...rest } = payload ?? {};
+
+    if (_id) {
+      // EDITAR
+      await apix.adminUpdateProduct(token, _id, rest);
+    } else {
+      // CREAR
+      await apix.adminCreateProduct(token, rest);
     }
+
+    setOpenModal(false);
+    await load();
+    setMsg("✅ Producto guardado.");
+  } catch (e) {
+    setMsg(`❌ No se pudo guardar: ${e.message || "error"}`);
   }
+}
+
 
   async function del(p) {
     if (!confirm(`¿Eliminar "${p.nombre}"?`)) return;

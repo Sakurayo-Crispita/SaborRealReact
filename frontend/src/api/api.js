@@ -2,22 +2,34 @@
 import { api, authHeader } from "./client";
 
 /** ---- Helpers ---- **/
-const mapProduct = (doc = {}) => ({
-  _id: doc.id || doc._id,
-  nombre: doc.title ?? doc.nombre ?? "Producto",
-  precio: Number(doc.price ?? doc.precio ?? 0),
-  categoria: doc.category ?? doc.categoria ?? null,
-  imagenUrl: doc.image ?? doc.imagenUrl ?? null,
-  slug: doc.slug ?? null,
-  ...doc,
+const mapProduct = (doc = {}) => {
+  const precio = Number(doc.price ?? doc.precio ?? 0);
+  const activo = typeof doc.activo === "boolean" ? doc.activo : (doc.disponible ?? true);
+
+  return {
+    _id: doc.id || doc._id,
+    nombre: doc.title ?? doc.nombre ?? "Producto",
+    descripcion: doc.descripcion ?? null,
+    precio,
+    categoria: doc.category ?? doc.categoria ?? null,
+    imagenUrl: doc.image ?? doc.imagenUrl ?? null,
+    slug: doc.slug ?? null,
+    activo,
+    disponible: Boolean(activo),
+    ...doc,
+  };
+};
+
+const jsonHeaders = (token) => ({
+  "Content-Type": "application/json",
+  ...(token ? authHeader(token) : {}),
 });
 
 const handle = async (fn) => {
   try {
     return await fn();
   } catch (e) {
-    const msg =
-      typeof e?.message === "string" && e.message ? e.message : "Error de red";
+    const msg = typeof e?.message === "string" && e.message ? e.message : "Error de red";
     throw new Error(msg);
   }
 };
@@ -28,6 +40,7 @@ export const apix = {
     return handle(() =>
       api("/api/auth/login", {
         method: "POST",
+        headers: jsonHeaders(),
         body: JSON.stringify({ email, password }),
       })
     );
@@ -37,29 +50,26 @@ export const apix = {
     return handle(() =>
       api("/api/auth/register", {
         method: "POST",
+        headers: jsonHeaders(),
         body: JSON.stringify(payload),
       })
     );
   },
 
   me(token) {
-    return handle(() =>
-      api("/api/auth/me", { headers: { ...authHeader(token) } })
-    );
+    return handle(() => api("/api/auth/me", { headers: { ...authHeader(token) } }));
   },
 
-  /** ACTUALIZAR PERFIL */
   updateProfile(token, payload) {
     return handle(() =>
       api("/api/auth/me", {
         method: "PUT",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(payload),
       })
     );
   },
 
-  /** CAMBIAR PASSWORD */
   changePassword(token, a, b) {
     const body =
       typeof a === "object" && a !== null
@@ -68,7 +78,7 @@ export const apix = {
     return handle(() =>
       api("/api/auth/change-password", {
         method: "PATCH",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(body),
       })
     );
@@ -83,14 +93,14 @@ export const apix = {
     });
   },
 
-  // (Si usas estos endpoints públicos, los dejo tal cual)
+  // Endpoints públicos (si los sigues usando):
   upsertProducto(token, payload) {
     const id = payload._id || payload.id;
     if (id) {
       return handle(() =>
         api(`/api/productos/${encodeURIComponent(id)}`, {
           method: "PUT",
-          headers: { ...authHeader(token) },
+          headers: jsonHeaders(token),
           body: JSON.stringify(payload),
         })
       );
@@ -98,7 +108,7 @@ export const apix = {
     return handle(() =>
       api(`/api/productos`, {
         method: "POST",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(payload),
       })
     );
@@ -115,16 +125,14 @@ export const apix = {
 
   /* ========== Comentarios ========== */
   getComentarios(productId) {
-    return handle(() =>
-      api(`/api/comentarios?producto_id=${encodeURIComponent(productId)}`)
-    );
+    return handle(() => api(`/api/comentarios?producto_id=${encodeURIComponent(productId)}`));
   },
 
   createComentario(token, payload) {
     return handle(() =>
       api("/api/comentarios", {
         method: "POST",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(payload),
       })
     );
@@ -132,17 +140,12 @@ export const apix = {
 
   /* ========== Orders (cliente) ========== */
   myOrders(token) {
-    return handle(() =>
-      api("/api/orders", { headers: { ...authHeader(token) } })
-    );
+    return handle(() => api("/api/orders", { headers: { ...authHeader(token) } }));
   },
 
-  /** Detalle por id */
   orderDetail(token, orderId) {
     return handle(() =>
-      api(`/api/orders/${encodeURIComponent(orderId)}`, {
-        headers: { ...authHeader(token) },
-      })
+      api(`/api/orders/${encodeURIComponent(orderId)}`, { headers: { ...authHeader(token) } })
     );
   },
 
@@ -150,58 +153,50 @@ export const apix = {
     return handle(() =>
       api("/api/orders", {
         method: "POST",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(payload),
       })
     );
   },
 
-  // ===== ADMIN (CRUD productos y utilidades) =====
-
-  // LIST: usa el router admin real
+  /* ========== ADMIN: Productos ========== */
   adminListProducts(token) {
     return handle(async () => {
-      const data = await api("/api/admin/products", {
-        headers: { ...authHeader(token) },
-      });
+      const data = await api("/api/admin/products", { headers: { ...authHeader(token) } });
       return Array.isArray(data) ? data.map(mapProduct) : [];
     });
   },
 
-  // CREATE (POST)
   adminCreateProduct(token, payload) {
     return handle(() =>
       api("/api/admin/products", {
         method: "POST",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(payload),
       })
     );
   },
 
-  // UPDATE (PUT completo)
   adminUpdateProduct(token, id, payload) {
     return handle(() =>
       api(`/api/admin/products/${encodeURIComponent(id)}`, {
         method: "PUT",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(payload),
       })
     );
   },
 
-  // PATCH parcial (ej. { disponible: false })
   adminPatchProduct(token, id, patch) {
     return handle(() =>
       api(`/api/admin/products/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify(patch),
       })
     );
   },
 
-  // DELETE
   adminDeleteProduct(token, id) {
     return handle(() =>
       api(`/api/admin/products/${encodeURIComponent(id)}`, {
@@ -211,28 +206,32 @@ export const apix = {
     );
   },
 
-  // (Opcional) Admin de pedidos
+  // Wrapper de compatibilidad para tu Admin.jsx anterior:
+  adminUpsertProduct(token, payload) {
+    const { _id, id, ...rest } = payload ?? {};
+    const pid = _id || id;
+    return pid
+      ? this.adminUpdateProduct(token, pid, rest)
+      : this.adminCreateProduct(token, rest);
+  },
+
+  /* ========== ADMIN: Otros (placeholders) ========== */
   adminListOrders(token) {
-    return handle(() =>
-      api("/api/orders", { headers: { ...authHeader(token) } })
-    );
+    return handle(() => api("/api/orders", { headers: { ...authHeader(token) } }));
   },
 
   adminUpdateOrderStatus(token, id, status) {
     return handle(() =>
       api(`/api/orders/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        headers: { ...authHeader(token) },
+        headers: jsonHeaders(token),
         body: JSON.stringify({ status }),
       })
     );
   },
 
-  // Placeholder clientes (cuando tengas endpoint real)
   adminListClients(token) {
-    return handle(() =>
-      api("/api/clients", { headers: { ...authHeader(token) } })
-    );
+    return handle(() => api("/api/clients", { headers: { ...authHeader(token) } }));
   },
 };
 
