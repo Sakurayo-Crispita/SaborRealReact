@@ -1,6 +1,7 @@
 // src/App.jsx
 import { Link, Route, Routes } from 'react-router-dom';
 import { useState } from 'react';
+
 import LeftRail from "./LeftRail";
 import Historia from "./Historia";
 import { useAuth } from './AuthContext.jsx';
@@ -8,11 +9,15 @@ import { useCart } from './CartContext.jsx';
 import Catalogo from './Catalogo.jsx';
 import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
-import Orders from './Orders.jsx';          
+import Orders from './Orders.jsx';
 import ProfileModal from './ProfileModal.jsx';
 
+// 🔐 Admin
+import AdminRoute from "./AdminRoute.jsx";
+import Admin from "./Admin.jsx";
+
 function Header({ onOpenProfile }) {
-  const { isAuthenticated, firstName, user, logout } = useAuth();
+  const { isAuthenticated, isAdmin, firstName, user, logout } = useAuth();
   const { items, total } = useCart();
   const avatarUrl = user?.avatarUrl || null;
   const initial = (firstName || 'U')[0]?.toUpperCase();
@@ -28,6 +33,7 @@ function Header({ onOpenProfile }) {
         <Link to="/">Catálogo</Link>
         <Link to="/checkout">Ticket ({items.length}) — S/ {total.toFixed(2)}</Link>
         <Link to="/orders">Mis pedidos</Link>
+        {isAdmin && <Link to="/admin">Admin</Link>}
       </nav>
 
       <div className="site-header__right">
@@ -76,6 +82,16 @@ export default function App() {
           <Route path="/checkout" element={<main id="main"><Checkout /></main>} />
           <Route path="/orders" element={<main id="main"><Orders /></main>} />
           <Route path="/historia" element={<main id="main"><Historia /></main>} />
+
+          {/* 🔐 Ruta protegida Admin */}
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <main id="main"><Admin /></main>
+              </AdminRoute>
+            }
+          />
         </Routes>
       </div>
 

@@ -422,5 +422,14 @@ button:disabled, .btn:disabled{
 .status-badge.badge--paid      { background: #ecfdf5; border-color: #a7f3d0; color: #065f46; }
 .status-badge.badge--delivered { background: #f0fdf4; border-color: #bbf7d0; color: #166534; }
 .status-badge.badge--cancelled { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+/* ====== Admin ====== */
+.admin-tabs { display:flex; gap:8px; margin:10px 0 14px; }
+.admin-tab { border:1px solid var(--border); background:#fff; padding:8px 12px; border-radius:10px; cursor:pointer; }
+.admin-tab.is-active { background:#f3e7d9; font-weight:800; }
 
+.table-wrap { overflow:auto; }
+.admin-table { width:100%; border-collapse:collapse; }
+.admin-table th, .admin-table td { border-bottom:1px solid var(--border); padding:8px 10px; text-align:left; }
+.admin-actions { display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px; }
 
+.status-badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:700; }

@@ -123,6 +123,49 @@ export const apix = {
       })
     );
   },
+    // ===== ADMIN =====
+  adminListProducts(token) {
+    return handle(() =>
+      api("/api/admin/products", { headers: { ...authHeader(token) } })
+    );
+  },
+  adminUpsertProduct(token, payload) { // crear/editar
+    return handle(() =>
+      api("/api/admin/products", {
+        method: "POST",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+  adminDeleteProduct(token, id) {
+    return handle(() =>
+      api(`/api/admin/products/${id}`, {
+        method: "DELETE",
+        headers: { ...authHeader(token) },
+      })
+    );
+  },
+  adminListOrders(token) {
+    return handle(() =>
+      api("/api/admin/orders", { headers: { ...authHeader(token) } })
+    );
+  },
+  adminUpdateOrderStatus(token, id, status) {
+    return handle(() =>
+      api(`/api/admin/orders/${id}/status`, {
+        method: "PATCH",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify({ status }),
+      })
+    );
+  },
+  adminListClients(token) {
+    return handle(() =>
+      api("/api/admin/clients", { headers: { ...authHeader(token) } })
+    );
+  },
 };
+
 
 export default apix;

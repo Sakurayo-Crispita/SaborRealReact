@@ -93,12 +93,21 @@ export function AuthProvider({ children }) {
       .trim()
       .split(/\s+/)[0] || (user?.email ? user.email.split('@')[0] : null);
 
+  // ===== Roles =====
+  const isAdmin = (user?.rol === 'admin') || (user?.role === 'admin');
+  const hasRole = (...roles) => {
+    const current = user?.rol || user?.role || 'customer';
+    return roles.map(String).some(r => String(r).toLowerCase() === String(current).toLowerCase());
+  };
+
   const value = useMemo(
     () => ({
       token,
       user,
       email: user?.email || null,
       isAuthenticated: Boolean(token),
+      isAdmin,                // <-- NUEVO
+      hasRole,               // <-- NUEVO
       authHeader: token ? `Bearer ${token}` : null,
       login, register, logout,
       // perfil
@@ -108,7 +117,7 @@ export function AuthProvider({ children }) {
       firstName,
       ready,
     }),
-    [token, user, firstName, ready]
+    [token, user, firstName, isAdmin, ready]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
