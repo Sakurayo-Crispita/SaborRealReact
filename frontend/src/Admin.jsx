@@ -21,7 +21,7 @@ async function compressImage(file, maxSize = 640, quality = 0.8) {
 
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", quality);
+  return canvas.toDataURL("image/jpeg", quality); // ~100–200 KB
 }
 
 /* ---------- MODAL PRODUCTO ---------- */
@@ -318,21 +318,111 @@ function ProductsSection({ token, onMsg }) {
   );
 }
 
-/* ---------- SECCIÓN: PEDIDOS ---------- */
-function OrdersSection({ token, onMsg }) {
+/* ---------- MODAL DETALLE DE PEDIDO ---------- */
+function OrderDetailModal({ open, onClose, order }) {
+  const PEN = useMemo(
+    () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
+    []
+  );
+  if (!open || !order) return null;
+
+  const d = order.delivery || {};
+  const items = Array.isArray(order.items) ? order.items : [];
+
+  return (
+    <div className="pmodal__backdrop" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="pmodal" onClick={(e) => e.stopPropagation()}>
+        <div className="pmodal__header">
+          <div className="pmodal__brandPh">SR</div>
+          <h3 className="pmodal__title">Detalle del pedido</h3>
+          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">×</button>
+        </div>
+
+        <div className="pmodal__body" style={{ display: "grid", gap: 12 }}>
+          <div className="card" style={{ padding: 12 }}>
+            <strong>Entrega</strong>
+            <div className="hint" style={{ marginTop: 6 }}>
+              <div><b>Nombre:</b> {d.nombre || "—"}</div>
+              <div><b>Teléfono:</b> {d.telefono || "—"}</div>
+              <div><b>Dirección:</b> {d.direccion || "—"}</div>
+              {d.notas && <div><b>Notas:</b> {d.notas}</div>}
+            </div>
+          </div>
+
+          <div className="receipt__tableWrap">
+            <table className="receipt__table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th align="left">Producto</th>
+                  <th>Precio</th>
+                  <th>Qty</th>
+                  <th>Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.length === 0 && (
+                  <tr><td colSpan={4}><span className="hint">Sin ítems</span></td></tr>
+                )}
+                {items.map((it, idx) => (
+                  <tr key={idx}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {it.imagenUrl && (
+                          <img
+                            src={it.imagenUrl}
+                            alt=""
+                            width="36"
+                            height="24"
+                            style={{ objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
+                          />
+                        )}
+                        {it.nombre || it.producto_id}
+                      </div>
+                    </td>
+                    <td align="center">{PEN.format(Number(it.precio || 0))}</td>
+                    <td align="center">{it.qty}</td>
+                    <td align="center">{PEN.format(Number(it.subtotal || (Number(it.precio||0)*Number(it.qty||0))))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ textAlign: "right" }}>
+            <strong>Total: {PEN.format(Number(order.total || 0))}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- SECCIÓN: PEDIDOS AGRUPADOS POR USUARIO ---------- */
+function OrdersSectionGrouped({ token, onMsg }) {
   const [orders, setOrders] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [savingId, setSavingId] = useState(null);
+  const [openGroup, setOpenGroup] = useState({});
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailOrder, setDetailOrder] = useState(null);
 
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
     []
   );
 
+  const STATUS_OPTIONS = [
+    { value: "CREATED",   label: "Creado" },
+    { value: "PAID",      label: "Pagado" },
+    { value: "DELIVERED", label: "Entregado" },
+    { value: "CANCELLED", label: "Cancelado" },
+  ];
+
+  const normStatus = (o) => o.status || o.estado || "CREATED";
+
   async function load() {
     setBusy(true);
     try {
-      // Nota: hoy usa /api/orders (placeholder en backend).
-      // Cuando tengas /api/admin/orders cámbialo también en apix.adminListOrders.
       const data = await apix.adminListOrders(token);
       setOrders(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -344,49 +434,138 @@ function OrdersSection({ token, onMsg }) {
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
+  // Agrupar por cliente (nombre + teléfono)
+  const groups = useMemo(() => {
+    const map = new Map();
+    for (const o of orders) {
+      const d = o.delivery || {};
+      const key = `${(d.nombre || "Sin nombre").trim()}|${(d.telefono || "").trim()}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(o);
+    }
+    return Array.from(map.entries()).map(([key, arr]) => {
+      const [nombre, telefono] = key.split("|");
+      const total = arr.reduce((s, x) => s + Number(x.total || 0), 0);
+      arr.sort((a,b) => new Date(b.creadoAt || b.createdAt) - new Date(a.creadoAt || a.createdAt));
+      return { key, nombre, telefono, items: arr, total };
+    });
+  }, [orders]);
+
+  async function changeStatus(order, next) {
+    const id = order._id;
+    const prev = normStatus(order);
+    if (next === prev) return;
+
+    setSavingId(id);
+    setOrders((lst) =>
+      lst.map(o => o._id === id ? { ...o, status: next, estado: next } : o)
+    );
+
+    try {
+      await apix.adminUpdateOrderStatus(token, id, next);
+      onMsg("✅ Estado actualizado.");
+    } catch (e) {
+      setOrders((lst) =>
+        lst.map(o => o._id === id ? { ...o, status: prev, estado: prev } : o)
+      );
+      onMsg(`❌ No se pudo actualizar estado: ${e.message || "error"}`);
+    } finally {
+      setSavingId(null);
+    }
+  }
+
+  function toggleGroup(k) {
+    setOpenGroup((prev) => ({ ...prev, [k]: !prev[k] }));
+  }
+
+  function openDetail(o) {
+    setDetailOrder(o);
+    setDetailOpen(true);
+  }
+
   return (
-    <div className="card" style={{ padding: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <strong>Pedidos</strong>
+    <>
+      <div className="card" style={{ padding: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <strong>Pedidos</strong>
+          <button className="btn btn-outline-secondary" onClick={load} disabled={busy}>
+            Recargar
+          </button>
+        </div>
+
+        {busy && <p className="hint" style={{ marginTop: 8 }}>Cargando…</p>}
+        {!busy && groups.length === 0 && (
+          <p className="hint" style={{ marginTop: 8 }}>Sin pedidos</p>
+        )}
+
+        {!busy && groups.map(g => (
+          <div key={g.key} className="card" style={{ marginTop: 12, padding: 12 }}>
+            <div
+              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+              onClick={() => toggleGroup(g.key)}
+            >
+              <div>
+                <strong>{g.nombre}</strong>{" "}
+                {g.telefono && <span className="hint">• {g.telefono}</span>}
+              </div>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <span className="hint">{g.items.length} pedido(s)</span>
+                <span className="hint">Total: {PEN.format(g.total)}</span>
+                <span aria-hidden>▾</span>
+              </div>
+            </div>
+
+            {openGroup[g.key] && (
+              <div className="receipt__tableWrap" style={{ marginTop: 10 }}>
+                <table className="receipt__table" style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th align="left">Código</th>
+                      <th>Total</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {g.items.map(o => {
+                      const when = new Date(o.creadoAt || o.createdAt || Date.now());
+                      const st = normStatus(o);
+                      return (
+                        <tr key={o._id}>
+                          <td>{o.code || o._id}</td>
+                          <td align="center">{PEN.format(Number(o.total || 0))}</td>
+                          <td align="center" style={{ minWidth: 180 }}>
+                            <select
+                              value={st}
+                              onChange={(e) => changeStatus(o, e.target.value)}
+                              disabled={savingId === o._id}
+                              style={{ padding: "6px 8px", borderRadius: 8 }}
+                            >
+                              {STATUS_OPTIONS.map(s => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td align="center">{when.toLocaleString()}</td>
+                          <td align="right">
+                            <button className="btn btn-outline-secondary" onClick={() => openDetail(o)}>
+                              Ver
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
 
-      <div className="receipt__tableWrap" style={{ marginTop: 8 }}>
-        <table className="receipt__table" style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr>
-              <th align="left">Código</th>
-              <th>Total</th>
-              <th>Estado</th>
-              <th>Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {busy && <tr><td colSpan={4}><span className="hint">Cargando…</span></td></tr>}
-            {!busy && orders.length === 0 && <tr><td colSpan={4}><span className="hint">Sin pedidos</span></td></tr>}
-            {!busy && orders.map(o => (
-              <tr key={o._id}>
-                <td>{o.code || o._id}</td>
-                <td align="center">{PEN.format(Number(o.total ?? 0))}</td>
-                <td align="center">{o.status || o.estado || "?"}</td>
-                <td align="center">{new Date(o.creadoAt || o.createdAt).toLocaleString()}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-/* ---------- SECCIÓN: CLIENTES (placeholder) ---------- */
-function ClientsSection() {
-  return (
-    <div className="card" style={{ padding: 12 }}>
-      <strong>Clientes</strong>
-      <p className="hint" style={{ marginTop: 8 }}>
-        Próximamente: listado de clientes, historial de compras y búsqueda.
-      </p>
-    </div>
+      <OrderDetailModal open={detailOpen} onClose={() => setDetailOpen(false)} order={detailOrder} />
+    </>
   );
 }
 
@@ -396,7 +575,7 @@ export default function Admin() {
   const nav = useNavigate();
 
   const [msg, setMsg] = useState("");
-  const [tab, setTab] = useState("productos"); // 'productos' | 'pedidos' | 'clientes'
+  const [tab, setTab] = useState("productos"); // 'productos' | 'pedidos'
 
   useEffect(() => {
     if (!isAuthenticated) { nav("/login"); return; }
@@ -406,7 +585,6 @@ export default function Admin() {
 
   function onMsg(m) {
     setMsg(m);
-    // auto-clear suave
     if (m) setTimeout(() => setMsg(""), 3500);
   }
 
@@ -429,17 +607,10 @@ export default function Admin() {
         >
           Pedidos
         </button>
-        <button
-          className={`btn ${tab === "clientes" ? "btn-primary" : "btn-outline-secondary"}`}
-          onClick={() => setTab("clientes")}
-        >
-          Clientes
-        </button>
       </div>
 
       {tab === "productos" && <ProductsSection token={token} onMsg={onMsg} />}
-      {tab === "pedidos"   && <OrdersSection   token={token} onMsg={onMsg} />}
-      {tab === "clientes"  && <ClientsSection />}
+      {tab === "pedidos"   && <OrdersSectionGrouped token={token} onMsg={onMsg} />}
     </main>
   );
 }
