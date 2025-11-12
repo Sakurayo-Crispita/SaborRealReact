@@ -60,9 +60,10 @@ export const apix = {
 
   /** CAMBIAR PASSWORD */
   changePassword(token, a, b) {
-    const body = (typeof a === "object" && a !== null)
-      ? { current_password: a.oldPassword, new_password: a.newPassword }
-      : { current_password: a, new_password: b };
+    const body =
+      typeof a === "object" && a !== null
+        ? { current_password: a.oldPassword, new_password: a.newPassword }
+        : { current_password: a, new_password: b };
     return handle(() =>
       api("/api/auth/change-password", {
         method: "PATCH",
@@ -79,6 +80,36 @@ export const apix = {
       const data = await api(`/api/productos${q}`);
       return Array.isArray(data) ? data.map(mapProduct) : [];
     });
+  },
+
+  // Crear o actualizar producto (si tu backend soporta PUT /api/productos/:id)
+  upsertProducto(token, payload) {
+    const id = payload._id || payload.id;
+    if (id) {
+      return handle(() =>
+        api(`/api/productos/${encodeURIComponent(id)}`, {
+          method: "PUT",
+          headers: { ...authHeader(token) },
+          body: JSON.stringify(payload),
+        })
+      );
+    }
+    return handle(() =>
+      api(`/api/productos`, {
+        method: "POST",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
+  deleteProducto(token, id) {
+    return handle(() =>
+      api(`/api/productos/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { ...authHeader(token) },
+      })
+    );
   },
 
   /* ========== Comentarios ========== */
@@ -98,14 +129,14 @@ export const apix = {
     );
   },
 
-  /* ========== Orders ========== */
+  /* ========== Orders (cliente) ========== */
   myOrders(token) {
     return handle(() =>
       api("/api/orders", { headers: { ...authHeader(token) } })
     );
   },
 
-  /** NUEVO: detalle por id */
+  /** Detalle por id */
   orderDetail(token, orderId) {
     return handle(() =>
       api(`/api/orders/${encodeURIComponent(orderId)}`, {
@@ -123,49 +154,51 @@ export const apix = {
       })
     );
   },
-    // ===== ADMIN =====
+
+  /* ========== Alias “Admin” sin 404 ========== */
+  // Estos alias usan las rutas existentes para evitar /api/admin/* inexistentes.
   adminListProducts(token) {
-    return handle(() =>
-      api("/api/admin/products", { headers: { ...authHeader(token) } })
-    );
+    // Igual que getProductos, pero exige token por si el backend valida rol
+    return handle(async () => {
+      const data = await api("/api/productos", { headers: { ...authHeader(token) } });
+      return Array.isArray(data) ? data.map(mapProduct) : [];
+    });
   },
-  adminUpsertProduct(token, payload) { // crear/editar
-    return handle(() =>
-      api("/api/admin/products", {
-        method: "POST",
-        headers: { ...authHeader(token) },
-        body: JSON.stringify(payload),
-      })
-    );
+
+  adminUpsertProduct(token, payload) {
+    return this.upsertProducto(token, payload);
   },
+
   adminDeleteProduct(token, id) {
-    return handle(() =>
-      api(`/api/admin/products/${id}`, {
-        method: "DELETE",
-        headers: { ...authHeader(token) },
-      })
-    );
+    return this.deleteProducto(token, id);
   },
+
+  // Si tu backend tiene un endpoint para listar TODOS los pedidos (admin),
+  // cámbialo aquí. De momento reutilizamos /api/orders.
   adminListOrders(token) {
     return handle(() =>
-      api("/api/admin/orders", { headers: { ...authHeader(token) } })
+      api("/api/orders", { headers: { ...authHeader(token) } })
     );
   },
+
+  // Si tu backend soporta actualizar estado: PATCH /api/orders/:id
   adminUpdateOrderStatus(token, id, status) {
     return handle(() =>
-      api(`/api/admin/orders/${id}/status`, {
+      api(`/api/orders/${encodeURIComponent(id)}`, {
         method: "PATCH",
         headers: { ...authHeader(token) },
         body: JSON.stringify({ status }),
       })
     );
   },
+
+  // Placeholder: cambia esta ruta cuando tengas soporte en backend
   adminListClients(token) {
+    // ⚠️ Cambia a tu endpoint real cuando exista, para evitar 404.
     return handle(() =>
-      api("/api/admin/clients", { headers: { ...authHeader(token) } })
+      api("/api/clients", { headers: { ...authHeader(token) } })
     );
   },
 };
-
 
 export default apix;
