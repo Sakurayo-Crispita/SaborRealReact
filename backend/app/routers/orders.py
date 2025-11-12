@@ -112,3 +112,50 @@ async def order_detail(order_id: str, user_id: str = Depends(get_current_user_id
     o["_id"] = str(o["_id"])
     o["userId"] = str(o["userId"])
     return o
+# --- ADMIN ORDERS ---
+from fastapi import APIRouter as _APIRouter
+from .auth import get_current_user
+
+def _require_admin(user = Depends(get_current_user)):
+    if user.get("rol") != "admin":
+        raise HTTPException(status_code=403, detail="Solo admin")
+    return user
+
+admin = _APIRouter(prefix="/api/admin/orders", tags=["admin:orders"])
+
+@admin.get("", response_model=list[OrderOut])
+async def admin_list_orders(user = Depends(_require_admin)):
+    cur = database.db.pedidos.find({}).sort("createdAt", -1)
+    out = []
+    async for o in cur:
+        out.append({
+            "_id": str(o["_id"]),
+            "code": o.get("code"),
+            "total": float(o.get("total", 0)),
+            "status": o.get("status", "CREATED"),
+            "creadoAt": o.get("createdAt"),
+        })
+    return out
+
+@admin.get("/{order_id}")
+async def admin_order_detail(order_id: str, user = Depends(_require_admin)):
+    o = await database.db.pedidos.find_one({"_id": _oid(order_id)})
+    if not o:
+        raise HTTPException(404, "Pedido no encontrado")
+    o["_id"] = str(o["_id"])
+    if "userId" in o:
+        o["userId"] = str(o["userId"])
+    return o
+
+class _StatusPatch(BaseModel):
+    status: OrderStatus
+
+@admin.patch("/{order_id}")
+async def admin_update_status(order_id: str, body: _StatusPatch, user = Depends(_require_admin)):
+    res = await database.db.pedidos.update_one(
+        {"_id": _oid(order_id)},
+        {"$set": {"status": body.status}}
+    )
+    if res.matched_count == 0:
+        raise HTTPException(404, "Pedido no encontrado")
+    return {"ok": True}

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers.orders import admin as admin_orders 
 from . import database
 from .seed import seed
 from .routers import productos, comentarios, auth, orders
@@ -50,6 +51,7 @@ app.include_router(comentarios.router)   # público/privado comentarios
 app.include_router(auth.router)          # auth
 app.include_router(orders.router)        # pedidos (usuario)
 app.include_router(admin_products)       # admin productos (CRUD)
+app.include_router(admin_orders)
 
 # ---------- Health ----------
 @app.get("/")
