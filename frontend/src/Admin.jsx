@@ -21,22 +21,23 @@ async function compressImage(file, maxSize = 640, quality = 0.8) {
 
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", quality); // ~100–200 KB
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
+/* ---------- MODAL PRODUCTO ---------- */
 function ProductModal({ open, onClose, initial, onSave }) {
   const isEdit = Boolean(initial?._id);
   const [form, setForm] = useState({
     _id: initial?._id ?? null,
     nombre: initial?.nombre ?? "",
+    descripcion: initial?.descripcion ?? "",
     precio: Number(initial?.precio ?? 0),
     categoria: initial?.categoria ?? "",
     disponible: Boolean(initial?.disponible ?? true),
-    descripcion: initial?.descripcion ?? "",
   });
 
-  const [preview, setPreview] = useState(initial?.imagenUrl || ""); // dataURL o URL existente
-  const [pickedFile, setPickedFile] = useState(null);               // File seleccionado
+  const [preview, setPreview] = useState(initial?.imagenUrl || "");
+  const [pickedFile, setPickedFile] = useState(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -44,10 +45,10 @@ function ProductModal({ open, onClose, initial, onSave }) {
       setForm({
         _id: initial?._id ?? null,
         nombre: initial?.nombre ?? "",
+        descripcion: initial?.descripcion ?? "",
         precio: Number(initial?.precio ?? 0),
         categoria: initial?.categoria ?? "",
         disponible: Boolean(initial?.disponible ?? true),
-        descripcion: initial?.descripcion ?? "",
       });
       setPreview(initial?.imagenUrl || "");
       setPickedFile(null);
@@ -68,7 +69,6 @@ function ProductModal({ open, onClose, initial, onSave }) {
       setErr("El archivo debe ser una imagen.");
       return;
     }
-    // Comprimir a dataURL
     const dataUrl = await compressImage(file, 720, 0.82);
     setPickedFile(file);
     setPreview(dataUrl);
@@ -84,13 +84,11 @@ function ProductModal({ open, onClose, initial, onSave }) {
     const payload = {
       ...(form._id ? { _id: form._id } : {}),
       nombre,
+      descripcion: form.descripcion?.trim() || null,
       precio,
       categoria: form.categoria?.trim() || null,
-      disponible: !!form.disponible,
-      descripcion: form.descripcion?.trim() || null,
-      // Si el admin eligió un archivo, mandamos la versión comprimida (dataURL)
+      disponible: !!form.disponible, // backend lo mapea a 'activo'
       ...(preview && preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
-      // Si no eligió archivo pero existía una imagen previa URL, mantenla:
       ...(!pickedFile && preview && !preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
     };
 
@@ -109,7 +107,6 @@ function ProductModal({ open, onClose, initial, onSave }) {
         </div>
 
         <div className="pmodal__body">
-          {/* Previa */}
           <div className="pmodal__avatarBox" style={{ marginBottom: 12 }}>
             <div className="pmodal__avatar" style={{ width: 96, height: 64, borderRadius: 10 }}>
               {preview ? <img src={preview} alt="Previsualización" /> : <div className="pmodal__avatarPh">🖼️</div>}
@@ -144,6 +141,17 @@ function ProductModal({ open, onClose, initial, onSave }) {
               />
             </div>
 
+            <div className="form__grp" style={{ gridColumn: "1 / -1" }}>
+              <label>Descripción</label>
+              <textarea
+                name="descripcion"
+                rows={3}
+                value={form.descripcion}
+                onChange={onChange}
+                placeholder="Breve descripción del producto"
+              />
+            </div>
+
             <div className="form__grp">
               <label>Categoría</label>
               <input
@@ -152,16 +160,6 @@ function ProductModal({ open, onClose, initial, onSave }) {
                 onChange={onChange}
                 placeholder="pan, postre, bebida…"
               />
-            </div>
-            <div className="form__grp" style={{ gridColumn: "1 / -1" }}>
-            <label>Descripción</label>
-            <textarea
-            name="descripcion"
-            rows={3}
-            value={form.descripcion}
-            onChange={onChange}
-            placeholder="Descripción breve del producto"
-            />
             </div>
 
             <div className="form__grp" style={{ alignItems: "center", flexDirection: "row", gap: 8 }}>
@@ -182,13 +180,10 @@ function ProductModal({ open, onClose, initial, onSave }) {
   );
 }
 
-export default function Admin() {
-  const { token, isAuthenticated, user } = useAuth();
-  const nav = useNavigate();
-
+/* ---------- SECCIÓN: PRODUCTOS ---------- */
+function ProductsSection({ token, onMsg }) {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState("");
   const [openModal, setOpenModal] = useState(false);
   const [editing, setEditing] = useState(null);
 
@@ -197,81 +192,60 @@ export default function Admin() {
     []
   );
 
-  useEffect(() => {
-    if (!isAuthenticated) { nav("/login"); return; }
-    if (user?.rol !== "admin") { nav("/"); return; }
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.rol]);
-
   async function load() {
-    setBusy(true); setMsg("");
+    setBusy(true);
     try {
-      const data = await apix.adminListProducts(token).catch(() => apix.getProductos());
+      const data = await apix.adminListProducts(token);
       setItems(Array.isArray(data) ? data : []);
-    } catch {
-      setMsg("No se pudieron cargar productos.");
+    } catch (e) {
+      onMsg(`❌ No se pudieron cargar productos: ${e.message || "error"}`);
       setItems([]);
     } finally {
       setBusy(false);
     }
   }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   function openCreate() { setEditing(null); setOpenModal(true); }
   function openEdit(p)  { setEditing(p);   setOpenModal(true); }
 
-// dentro de Admin.jsx
-
-async function saveProduct(payload) {
-  try {
-    setMsg("");
-
-    // separa _id
-    const { _id, ...rest } = payload ?? {};
-
-    if (_id) {
-      // EDITAR
-      await apix.adminUpdateProduct(token, _id, rest);
-    } else {
-      // CREAR
-      await apix.adminCreateProduct(token, rest);
+  async function saveProduct(payload) {
+    try {
+      if (payload._id) {
+        await apix.adminUpdateProduct(token, payload._id, payload);
+      } else {
+        await apix.adminCreateProduct(token, payload);
+      }
+      setOpenModal(false);
+      await load();
+      onMsg("✅ Producto guardado.");
+    } catch (e) {
+      onMsg(`❌ No se pudo guardar: ${e.message || "error"}`);
     }
-
-    setOpenModal(false);
-    await load();
-    setMsg("✅ Producto guardado.");
-  } catch (e) {
-    setMsg(`❌ No se pudo guardar: ${e.message || "error"}`);
   }
-}
-
 
   async function del(p) {
     if (!confirm(`¿Eliminar "${p.nombre}"?`)) return;
     try {
       await apix.adminDeleteProduct(token, p._id);
       await load();
-      setMsg("🗑️ Producto eliminado.");
+      onMsg("🗑️ Producto eliminado.");
     } catch (e) {
-      setMsg(`❌ No se pudo eliminar: ${e.message || "error"}`);
+      onMsg(`❌ No se pudo eliminar: ${e.message || "error"}`);
     }
   }
 
-    async function toggleDisponible(p) {
+  async function toggleDisponible(p) {
     try {
-        await apix.adminPatchProduct(token, p._id, { disponible: !p.disponible });
-        setItems(lst => lst.map(x => x._id === p._id ? { ...x, disponible: !p.disponible } : x));
+      await apix.adminPatchProduct(token, p._id, { disponible: !p.disponible });
+      setItems((lst) => lst.map((x) => (x._id === p._id ? { ...x, disponible: !p.disponible } : x)));
     } catch (e) {
-        setMsg(`❌ No se pudo actualizar disponibilidad: ${e.message || "error"}`);
+      onMsg(`❌ No se pudo actualizar disponibilidad: ${e.message || "error"}`);
     }
-    }
-
+  }
 
   return (
-    <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>
-      <h2 className="page-title">Panel de administración</h2>
-      {msg && <p className="pmodal__msg" role="status">{msg}</p>}
-
+    <>
       <div className="card" style={{ padding: 12 }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <strong>Productos</strong>
@@ -301,7 +275,14 @@ async function saveProduct(payload) {
                         <img src={p.imagenUrl} alt="" width="36" height="24"
                              style={{ objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
                       ) : null}
-                      {p.nombre}
+                      <div style={{ display: "flex", flexDirection: "column" }}>
+                        <span>{p.nombre}</span>
+                        {p.descripcion && (
+                          <small className="hint" title={p.descripcion} style={{ maxWidth: 360, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            {p.descripcion}
+                          </small>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td align="center">{PEN.format(Number(p.precio ?? 0))}</td>
@@ -333,6 +314,132 @@ async function saveProduct(payload) {
         initial={editing}
         onSave={saveProduct}
       />
+    </>
+  );
+}
+
+/* ---------- SECCIÓN: PEDIDOS ---------- */
+function OrdersSection({ token, onMsg }) {
+  const [orders, setOrders] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  const PEN = useMemo(
+    () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
+    []
+  );
+
+  async function load() {
+    setBusy(true);
+    try {
+      // Nota: hoy usa /api/orders (placeholder en backend).
+      // Cuando tengas /api/admin/orders cámbialo también en apix.adminListOrders.
+      const data = await apix.adminListOrders(token);
+      setOrders(Array.isArray(data) ? data : []);
+    } catch (e) {
+      onMsg(`❌ No se pudieron cargar pedidos: ${e.message || "error"}`);
+      setOrders([]);
+    } finally {
+      setBusy(false);
+    }
+  }
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+
+  return (
+    <div className="card" style={{ padding: 12 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <strong>Pedidos</strong>
+      </div>
+
+      <div className="receipt__tableWrap" style={{ marginTop: 8 }}>
+        <table className="receipt__table" style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th align="left">Código</th>
+              <th>Total</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {busy && <tr><td colSpan={4}><span className="hint">Cargando…</span></td></tr>}
+            {!busy && orders.length === 0 && <tr><td colSpan={4}><span className="hint">Sin pedidos</span></td></tr>}
+            {!busy && orders.map(o => (
+              <tr key={o._id}>
+                <td>{o.code || o._id}</td>
+                <td align="center">{PEN.format(Number(o.total ?? 0))}</td>
+                <td align="center">{o.status || o.estado || "?"}</td>
+                <td align="center">{new Date(o.creadoAt || o.createdAt).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- SECCIÓN: CLIENTES (placeholder) ---------- */
+function ClientsSection() {
+  return (
+    <div className="card" style={{ padding: 12 }}>
+      <strong>Clientes</strong>
+      <p className="hint" style={{ marginTop: 8 }}>
+        Próximamente: listado de clientes, historial de compras y búsqueda.
+      </p>
+    </div>
+  );
+}
+
+/* ---------- ADMIN ROOT ---------- */
+export default function Admin() {
+  const { token, isAuthenticated, user } = useAuth();
+  const nav = useNavigate();
+
+  const [msg, setMsg] = useState("");
+  const [tab, setTab] = useState("productos"); // 'productos' | 'pedidos' | 'clientes'
+
+  useEffect(() => {
+    if (!isAuthenticated) { nav("/login"); return; }
+    if (user?.rol !== "admin") { nav("/"); return; }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user?.rol]);
+
+  function onMsg(m) {
+    setMsg(m);
+    // auto-clear suave
+    if (m) setTimeout(() => setMsg(""), 3500);
+  }
+
+  return (
+    <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>
+      <h2 className="page-title">Panel de administración</h2>
+      {msg && <p className="pmodal__msg" role="status">{msg}</p>}
+
+      {/* Tabs */}
+      <div className="tabs" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button
+          className={`btn ${tab === "productos" ? "btn-primary" : "btn-outline-secondary"}`}
+          onClick={() => setTab("productos")}
+        >
+          Productos
+        </button>
+        <button
+          className={`btn ${tab === "pedidos" ? "btn-primary" : "btn-outline-secondary"}`}
+          onClick={() => setTab("pedidos")}
+        >
+          Pedidos
+        </button>
+        <button
+          className={`btn ${tab === "clientes" ? "btn-primary" : "btn-outline-secondary"}`}
+          onClick={() => setTab("clientes")}
+        >
+          Clientes
+        </button>
+      </div>
+
+      {tab === "productos" && <ProductsSection token={token} onMsg={onMsg} />}
+      {tab === "pedidos"   && <OrdersSection   token={token} onMsg={onMsg} />}
+      {tab === "clientes"  && <ClientsSection />}
     </main>
   );
 }
