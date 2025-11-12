@@ -216,19 +216,31 @@ export const apix = {
   },
 
   /* ========== ADMIN: Otros (placeholders) ========== */
+  // ===== ADMIN ORDERS =====
   adminListOrders(token) {
-    return handle(() => api("/api/orders", { headers: { ...authHeader(token) } }));
+    return handle(() =>
+      api("/api/admin/orders", { headers: { ...authHeader(token) } })
+    );
+  },
+
+  adminOrderDetail(token, id) {
+    return handle(() =>
+      api(`/api/admin/orders/${encodeURIComponent(id)}`, {
+        headers: { ...authHeader(token) },
+      })
+    );
   },
 
   adminUpdateOrderStatus(token, id, status) {
     return handle(() =>
-      api(`/api/orders/${encodeURIComponent(id)}`, {
+      api(`/api/admin/orders/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        headers: jsonHeaders(token),
+        headers: { ...authHeader(token) },
         body: JSON.stringify({ status }),
       })
     );
   },
+
 
   adminListClients(token) {
     return handle(() => api("/api/clients", { headers: { ...authHeader(token) } }));

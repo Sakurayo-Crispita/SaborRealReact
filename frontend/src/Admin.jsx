@@ -21,7 +21,7 @@ async function compressImage(file, maxSize = 640, quality = 0.8) {
 
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", quality); // ~100–200 KB
+  return canvas.toDataURL("image/jpeg", quality);
 }
 
 /* ---------- MODAL PRODUCTO ---------- */
@@ -423,7 +423,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
   async function load() {
     setBusy(true);
     try {
-      const data = await apix.adminListOrders(token);
+      const data = await apix.adminListOrders(token); // ADMIN endpoint
       setOrders(Array.isArray(data) ? data : []);
     } catch (e) {
       onMsg(`❌ No se pudieron cargar pedidos: ${e.message || "error"}`);
@@ -478,9 +478,14 @@ function OrdersSectionGrouped({ token, onMsg }) {
     setOpenGroup((prev) => ({ ...prev, [k]: !prev[k] }));
   }
 
-  function openDetail(o) {
-    setDetailOrder(o);
-    setDetailOpen(true);
+  async function openDetail(o) {
+    try {
+      const full = await apix.adminOrderDetail(token, o._id); // <-- fetch detalle real
+      setDetailOrder(full);
+      setDetailOpen(true);
+    } catch (e) {
+      onMsg(`❌ No se pudo cargar detalle: ${e.message || "error"}`);
+    }
   }
 
   return (
@@ -580,8 +585,7 @@ export default function Admin() {
   useEffect(() => {
     if (!isAuthenticated) { nav("/login"); return; }
     if (user?.rol !== "admin") { nav("/"); return; }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user?.rol]);
+  }, [isAuthenticated, user?.rol, nav]);
 
   function onMsg(m) {
     setMsg(m);
@@ -593,7 +597,6 @@ export default function Admin() {
       <h2 className="page-title">Panel de administración</h2>
       {msg && <p className="pmodal__msg" role="status">{msg}</p>}
 
-      {/* Tabs */}
       <div className="tabs" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <button
           className={`btn ${tab === "productos" ? "btn-primary" : "btn-outline-secondary"}`}
