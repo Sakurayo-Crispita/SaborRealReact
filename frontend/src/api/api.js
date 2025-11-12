@@ -224,6 +224,16 @@ adminDeleteProduct(token, id) {
       })
     );
   },
+  
+  adminPatchProduct(token, id, patch) {
+  return handle(() =>
+    api(`/api/admin/products/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: { ...authHeader(token) },
+      body: JSON.stringify(patch),
+    })
+  );
+},
 
   // Placeholder: cambia esta ruta cuando tengas soporte en backend
   adminListClients(token) {

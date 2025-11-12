@@ -10,6 +10,18 @@ class MongoModel(BaseModel):
         json_encoders={ObjectId: str},
     )
 
+# ... imports arriba
+class ProductoPatch(MongoModel):
+    nombre: Optional[str] = None
+    descripcion: Optional[str] = None
+    precio: Optional[float] = None
+    stock: Optional[int] = None
+    activo: Optional[bool] = None
+    imagenUrl: Optional[str] = None
+    categoria: Optional[str] = None
+    # compat con front:
+    disponible: Optional[bool] = None
+
 # ---------- Productos ----------
 class ProductoIn(MongoModel):
     nombre: str = Field(min_length=2, description="Nombre del producto")

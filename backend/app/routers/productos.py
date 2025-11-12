@@ -5,7 +5,7 @@ from bson import ObjectId
 from bson.errors import InvalidId
 
 from .. import database
-from ..schemas import ProductoIn, ProductoOut
+from ..schemas import ProductoIn, ProductoOut, ProductoPatch
 from .auth import get_current_user  # para chequear rol admin
 
 # -------- ADMIN --------
@@ -36,14 +36,18 @@ async def admin_list_products(
     return await _serialize_many(cursor)
 
 @admin.post("", response_model=ProductoOut, status_code=201)
-async def admin_create_product(payload: ProductoIn, user = Depends(require_admin)):
+async def admin_create_product(payload: ProductoPatch, user = Depends(require_admin)):
     data = _normalize_payload(payload.model_dump(exclude_unset=True))
-    # defaults mínimos
-    data.setdefault("activo", True)
+    if not data.get("nombre") or data.get("precio") is None:
+        raise HTTPException(status_code=422, detail="nombre y precio son obligatorios")
+
     data.setdefault("stock", 0)
+    data.setdefault("activo", True)
+
     ins = await database.db.productos.insert_one(data)
     doc = await database.db.productos.find_one({"_id": ins.inserted_id})
     return database.serialize_doc(doc)
+
 
 @admin.put("/{product_id}", response_model=ProductoOut)
 async def admin_update_product(product_id: str, payload: ProductoIn, user = Depends(require_admin)):
@@ -64,7 +68,26 @@ async def admin_delete_product(product_id: str, user = Depends(require_admin)):
     if res.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Not Found")
     return None
+@admin.patch("/{product_id}", response_model=ProductoOut)
+async def admin_patch_product(
+    product_id: str,
+    payload: ProductoPatch,
+    user = Depends(require_admin),
+):
+    data = _normalize_payload(payload.model_dump(exclude_unset=True))
+    if not data:
+        raise HTTPException(status_code=400, detail="Nada para actualizar")
 
+    res = await database.db.productos.update_one(
+        {"_id": _oid(product_id)},
+        {"$set": data},
+        upsert=False,
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Not Found")
+
+    doc = await database.db.productos.find_one({"_id": _oid(product_id)})
+    return database.serialize_doc(doc)
 
 router = APIRouter(prefix="/api/productos", tags=["productos"])
 
