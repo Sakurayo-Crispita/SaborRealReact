@@ -155,29 +155,56 @@ export const apix = {
     );
   },
 
-  /* ========== Alias “Admin” sin 404 ========== */
-  // Estos alias usan las rutas existentes para evitar /api/admin/* inexistentes.
-// en src/api/api.js
-  adminListProducts(token) {
-    return handle(async () => {
-      // intenta con ?all=1; si falla, usa /api/productos normal
+// ===== ADMIN =====
+adminListProducts(token) {
+  return handle(async () => {
+    try {
+      const data = await api("/api/productos?all=1", { headers: { ...authHeader(token) } });
+      return Array.isArray(data) ? data.map(mapProduct) : [];
+    } catch {
+      const data = await api("/api/productos", { headers: { ...authHeader(token) } });
+      return Array.isArray(data) ? data.map(mapProduct) : [];
+    }
+  });
+},
+
+adminUpsertProduct(token, payload) {
+  return handle(async () => {
+    const { _id, ...rest } = payload ?? {};
+    // Si hay _id intentamos PUT /admin/products/:id
+    if (_id) {
       try {
-        const data = await api("/api/productos?all=1", { headers: { ...authHeader(token) } });
-        return Array.isArray(data) ? data.map(mapProduct) : [];
-      } catch {
-        const data = await api("/api/productos", { headers: { ...authHeader(token) } });
-        return Array.isArray(data) ? data.map(mapProduct) : [];
+        return await api(`/api/admin/products/${encodeURIComponent(_id)}`, {
+          method: "PUT",
+          headers: { ...authHeader(token) },
+          body: JSON.stringify(rest),
+        });
+      } catch (e) {
+        // Fallback: algunos backends aceptan POST con _id para editar
+        return await api("/api/admin/products", {
+          method: "POST",
+          headers: { ...authHeader(token) },
+          body: JSON.stringify(payload),
+        });
       }
+    }
+    // Crear
+    return await api("/api/admin/products", {
+      method: "POST",
+      headers: { ...authHeader(token) },
+      body: JSON.stringify(rest),
     });
-  },
+  });
+},
 
-  adminUpsertProduct(token, payload) {
-    return this.upsertProducto(token, payload);
-  },
-
-  adminDeleteProduct(token, id) {
-    return this.deleteProducto(token, id);
-  },
+adminDeleteProduct(token, id) {
+  return handle(() =>
+    api(`/api/admin/products/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      headers: { ...authHeader(token) },
+    })
+  );
+},
 
   // Si tu backend tiene un endpoint para listar TODOS los pedidos (admin),
   // cámbialo aquí. De momento reutilizamos /api/orders.

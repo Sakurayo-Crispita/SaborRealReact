@@ -4,16 +4,38 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import { apix } from "./api/api";
 
+/* Util: comprimir imagen a dataURL JPEG */
+async function compressImage(file, maxSize = 640, quality = 0.8) {
+  const img = await new Promise((res, rej) => {
+    const url = URL.createObjectURL(file);
+    const i = new Image();
+    i.onload = () => res(i);
+    i.onerror = rej;
+    i.src = url;
+  });
+
+  const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * ratio);
+  canvas.height = Math.round(img.height * ratio);
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", quality); // ~100–200 KB
+}
+
 function ProductModal({ open, onClose, initial, onSave }) {
   const isEdit = Boolean(initial?._id);
   const [form, setForm] = useState({
     _id: initial?._id ?? null,
     nombre: initial?.nombre ?? "",
-    precio: initial?.precio ?? 0,
+    precio: Number(initial?.precio ?? 0),
     categoria: initial?.categoria ?? "",
-    imagenUrl: initial?.imagenUrl ?? "",
     disponible: Boolean(initial?.disponible ?? true),
   });
+
+  const [preview, setPreview] = useState(initial?.imagenUrl || ""); // dataURL o URL existente
+  const [pickedFile, setPickedFile] = useState(null);               // File seleccionado
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -23,9 +45,10 @@ function ProductModal({ open, onClose, initial, onSave }) {
         nombre: initial?.nombre ?? "",
         precio: Number(initial?.precio ?? 0),
         categoria: initial?.categoria ?? "",
-        imagenUrl: initial?.imagenUrl ?? "",
         disponible: Boolean(initial?.disponible ?? true),
       });
+      setPreview(initial?.imagenUrl || "");
+      setPickedFile(null);
       setErr("");
     }
   }, [open, initial]);
@@ -36,6 +59,19 @@ function ProductModal({ open, onClose, initial, onSave }) {
     setErr("");
   }
 
+  async function onPickFile(e) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setErr("El archivo debe ser una imagen.");
+      return;
+    }
+    // Comprimir a dataURL
+    const dataUrl = await compressImage(file, 720, 0.82);
+    setPickedFile(file);
+    setPreview(dataUrl);
+  }
+
   async function submit(e) {
     e.preventDefault();
     const nombre = form.nombre.trim();
@@ -43,15 +79,18 @@ function ProductModal({ open, onClose, initial, onSave }) {
     if (!nombre) return setErr("El nombre es obligatorio.");
     if (!Number.isFinite(precio) || precio < 0) return setErr("Precio inválido.");
 
-    // Campos permitidos
     const payload = {
       ...(form._id ? { _id: form._id } : {}),
       nombre,
       precio,
       categoria: form.categoria?.trim() || null,
-      imagenUrl: form.imagenUrl?.trim() || null,
       disponible: !!form.disponible,
+      // Si el admin eligió un archivo, mandamos la versión comprimida (dataURL)
+      ...(preview && preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
+      // Si no eligió archivo pero existía una imagen previa URL, mantenla:
+      ...(!pickedFile && preview && !preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
     };
+
     await onSave(payload);
   }
 
@@ -67,6 +106,22 @@ function ProductModal({ open, onClose, initial, onSave }) {
         </div>
 
         <div className="pmodal__body">
+          {/* Previa */}
+          <div className="pmodal__avatarBox" style={{ marginBottom: 12 }}>
+            <div className="pmodal__avatar" style={{ width: 96, height: 64, borderRadius: 10 }}>
+              {preview ? <img src={preview} alt="Previsualización" /> : <div className="pmodal__avatarPh">🖼️</div>}
+            </div>
+            <label className="btn btn-outline-secondary btn-sm">
+              Subir imagen
+              <input type="file" accept="image/*" hidden onChange={onPickFile} />
+            </label>
+            {preview && (
+              <button className="btn btn-outline-secondary btn-sm" onClick={() => { setPreview(""); setPickedFile(null); }}>
+                Quitar
+              </button>
+            )}
+          </div>
+
           <form onSubmit={submit} className="pmodal__grid" style={{ gap: "12px" }}>
             <div className="form__grp">
               <label>Nombre</label>
@@ -96,17 +151,6 @@ function ProductModal({ open, onClose, initial, onSave }) {
               />
             </div>
 
-            <div className="form__grp">
-              <label>Imagen (URL)</label>
-              <input
-                name="imagenUrl"
-                value={form.imagenUrl}
-                onChange={onChange}
-                placeholder="https://…"
-                spellCheck={false}
-              />
-            </div>
-
             <div className="form__grp" style={{ alignItems: "center", flexDirection: "row", gap: 8 }}>
               <input id="chk-disp" type="checkbox" name="disponible" checked={form.disponible} onChange={onChange} />
               <label htmlFor="chk-disp">Disponible</label>
@@ -133,7 +177,7 @@ export default function Admin() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [openModal, setOpenModal] = useState(false);
-  const [editing, setEditing] = useState(null); // producto en edición
+  const [editing, setEditing] = useState(null);
 
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
@@ -150,7 +194,6 @@ export default function Admin() {
   async function load() {
     setBusy(true); setMsg("");
     try {
-      // Preferir listado admin (muestra todo). Si tu backend no soporta ?all=1, apix.getProductos() será suficiente.
       const data = await apix.adminListProducts(token).catch(() => apix.getProductos());
       setItems(Array.isArray(data) ? data : []);
     } catch {
@@ -161,15 +204,8 @@ export default function Admin() {
     }
   }
 
-  function openCreate() {
-    setEditing(null);
-    setOpenModal(true);
-  }
-
-  function openEdit(p) {
-    setEditing(p);
-    setOpenModal(true);
-  }
+  function openCreate() { setEditing(null); setOpenModal(true); }
+  function openEdit(p)  { setEditing(p);   setOpenModal(true); }
 
   async function saveProduct(payload) {
     try {
@@ -206,7 +242,6 @@ export default function Admin() {
   return (
     <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>
       <h2 className="page-title">Panel de administración</h2>
-
       {msg && <p className="pmodal__msg" role="status">{msg}</p>}
 
       <div className="card" style={{ padding: 12 }}>
@@ -227,20 +262,16 @@ export default function Admin() {
               </tr>
             </thead>
             <tbody>
-              {busy && (
-                <tr><td colSpan={5}><span className="hint">Cargando…</span></td></tr>
-              )}
-
-              {!busy && items.length === 0 && (
-                <tr><td colSpan={5}><span className="hint">Sin productos</span></td></tr>
-              )}
+              {busy && <tr><td colSpan={5}><span className="hint">Cargando…</span></td></tr>}
+              {!busy && items.length === 0 && <tr><td colSpan={5}><span className="hint">Sin productos</span></td></tr>}
 
               {!busy && items.map((p) => (
                 <tr key={p._id}>
                   <td>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       {p.imagenUrl ? (
-                        <img src={p.imagenUrl} alt="" width="36" height="24" style={{ objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
+                        <img src={p.imagenUrl} alt="" width="36" height="24"
+                             style={{ objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
                       ) : null}
                       {p.nombre}
                     </div>
@@ -249,11 +280,7 @@ export default function Admin() {
                   <td align="center">{p.categoria || "—"}</td>
                   <td align="center">
                     <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                      <input
-                        type="checkbox"
-                        checked={!!p.disponible}
-                        onChange={() => toggleDisponible(p)}
-                      />
+                      <input type="checkbox" checked={!!p.disponible} onChange={() => toggleDisponible(p)} />
                       <span className="hint">{p.disponible ? "Sí" : "No"}</span>
                     </label>
                   </td>
@@ -272,7 +299,6 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Modal crear/editar */}
       <ProductModal
         open={openModal}
         onClose={() => setOpenModal(false)}
