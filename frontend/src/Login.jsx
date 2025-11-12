@@ -1,4 +1,6 @@
-import { useState } from 'react';
+// src/Login.jsx
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
 
 export default function Login() {
@@ -14,7 +16,20 @@ export default function Login() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  function onChange(e){ setForm({...form, [e.target.name]: e.target.value}); }
+  const nav = useNavigate();
+  const loc = useLocation();
+  // si llegaste desde una ruta protegida, vuelve allí; si no, ve a "/"
+  const from = loc.state?.from?.pathname || '/';
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      nav('/', { replace: true });
+    }
+  }, [isAuthenticated, nav]);
+
+  function onChange(e) {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
@@ -36,30 +51,33 @@ export default function Login() {
           direccion: form.direccion || null,
         });
       }
+      // redirige al destino original (si lo hubo) o al catálogo
+      nav(from, { replace: true });
     } catch (err) {
-      setError(err.message || 'Error');
+      setError(err?.message || 'Error');
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <main style={{maxWidth:520, margin:'2rem auto', padding:'0 1rem'}}>
-      <h2 style={{marginBottom:12}}>{mode === 'login' ? 'Iniciar sesión' : 'Registrar'}</h2>
+    <main style={{ maxWidth: 520, margin: '2rem auto', padding: '0 1rem' }}>
+      <h2 style={{ marginBottom: 12 }}>{mode === 'login' ? 'Iniciar sesión' : 'Registrar'}</h2>
       {isAuthenticated && <p className="hint">Ya estás autenticado.</p>}
 
-      <form onSubmit={onSubmit} className="card" style={{padding:16, display:'grid', gap:10}}>
+      <form onSubmit={onSubmit} className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
         {error && <div className="form-error">{error}</div>}
 
         <div>
           <label>Email</label>
           <input
             name="email"
-            type="email"                /* ✅ solo correos válidos */
+            type="email"
             required
             value={form.email}
             onChange={onChange}
             placeholder="tu@correo.com"
+            autoComplete="email"
           />
         </div>
 
@@ -69,10 +87,11 @@ export default function Login() {
             name="password"
             type="password"
             required
-            minLength={6}              /* ✅ mínimo recomendado */
+            minLength={6}
             value={form.password}
             onChange={onChange}
             placeholder="••••••"
+            autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
           />
           <small className="hint">Mínimo 6 caracteres.</small>
         </div>
@@ -83,10 +102,11 @@ export default function Login() {
               <label>Nombre</label>
               <input
                 name="nombre"
-                required                   /* ✅ obligatorio */
+                required
                 value={form.nombre}
                 onChange={onChange}
                 placeholder="Tu nombre"
+                autoComplete="name"
               />
             </div>
 
@@ -94,12 +114,13 @@ export default function Login() {
               <label>Teléfono</label>
               <input
                 name="telefono"
-                type="tel"                 /* ✅ teclado numérico móvil */
+                type="tel"
                 inputMode="numeric"
-                pattern="[0-9+\- ]{6,}"   /* ✅ dígitos, +, -, espacio; mínimo 6 */
+                pattern="[0-9+\- ]{6,}"
                 value={form.telefono}
                 onChange={onChange}
                 placeholder="+51 999 999 999"
+                autoComplete="tel"
               />
               <small className="hint">Solo números, espacios, + o -</small>
             </div>
@@ -111,6 +132,7 @@ export default function Login() {
                 value={form.direccion}
                 onChange={onChange}
                 placeholder="Calle 123"
+                autoComplete="street-address"
               />
             </div>
           </>
@@ -121,9 +143,13 @@ export default function Login() {
         </button>
       </form>
 
-      <button style={{marginTop:12}} onClick={()=>setMode(mode === 'login' ? 'register' : 'login')}>
+      <button style={{ marginTop: 12 }} onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
         Cambiar a {mode === 'login' ? 'registro' : 'login'}
       </button>
+
+      <p className="hint" style={{ marginTop: 12 }}>
+        <Link to="/">Ir al catálogo</Link>
+      </p>
     </main>
   );
 }

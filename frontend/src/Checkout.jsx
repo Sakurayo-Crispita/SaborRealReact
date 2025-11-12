@@ -3,12 +3,15 @@ import { useMemo, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { useCart } from "./CartContext.jsx";
 import { apix } from "./api/api";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const TEL_RGX = /^[\d+\-\s]{6,20}$/;
 
 export default function Checkout() {
   const { token, isAuthenticated } = useAuth();
   const { items, total, clear } = useCart();
+  const nav = useNavigate();
+  const loc = useLocation();
 
   const [form, setForm] = useState({
     delivery_nombre: "",
@@ -28,6 +31,7 @@ export default function Checkout() {
   );
 
   const cartEmpty = items.length === 0;
+  const showGate = !isAuthenticated; // ← si no está autenticado, mostrar burbuja
 
   function onChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -92,139 +96,186 @@ export default function Checkout() {
     }
   }
 
+  // Acciones del gate
+  const goLogin = () => nav("/login", { state: { from: loc } });
+  const goRegister = () => nav("/login?mode=register", { state: { from: loc } });
+
   return (
-    <main style={{ maxWidth: 880, margin: "2rem auto", padding: "0 1rem" }}>
-      <h2>Ticket</h2>
+    <>
+      {/* Contenido con blur cuando showGate=true */}
+      <div
+        style={{
+          filter: showGate ? "blur(2px)" : "none",
+          pointerEvents: showGate ? "none" : "auto",
+        }}
+        aria-hidden={showGate}
+      >
+        <main style={{ maxWidth: 880, margin: "2rem auto", padding: "0 1rem" }}>
+          <h2>Ticket</h2>
 
-      {items.length ? (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
-          <thead>
-            <tr>
-              <th align="left">Producto</th>
-              <th>Qty</th>
-              <th>Precio</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((it) => {
-              const nombre = it.nombre ?? it.title ?? "Producto";
-              const precio = Number(it.precio ?? it.price ?? 0);
-              return (
-                <tr key={it._id || it.id}>
-                  <td>{nombre}</td>
-                  <td align="center">{it.qty}</td>
-                  <td align="right">{PEN.format(precio)}</td>
-                  <td align="right">{PEN.format(precio * it.qty)}</td>
+          {items.length ? (
+            <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+              <thead>
+                <tr>
+                  <th align="left">Producto</th>
+                  <th>Qty</th>
+                  <th>Precio</th>
+                  <th>Subtotal</th>
                 </tr>
-              );
-            })}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={3} align="right">
-                <b>Total</b>
-              </td>
-              <td align="right">
-                <b aria-live="polite">{PEN.format(total)}</b>
-              </td>
-            </tr>
-          </tfoot>
-        </table>
-      ) : (
-        <p>Tu ticket está vacío.</p>
-      )}
+              </thead>
+              <tbody>
+                {items.map((it) => {
+                  const nombre = it.nombre ?? it.title ?? "Producto";
+                  const precio = Number(it.precio ?? it.price ?? 0);
+                  return (
+                    <tr key={it._id || it.id}>
+                      <td>{nombre}</td>
+                      <td align="center">{it.qty}</td>
+                      <td align="right">{PEN.format(precio)}</td>
+                      <td align="right">{PEN.format(precio * it.qty)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan={3} align="right">
+                    <b>Total</b>
+                  </td>
+                  <td align="right">
+                    <b aria-live="polite">{PEN.format(total)}</b>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          ) : (
+            <p>Tu ticket está vacío.</p>
+          )}
 
-      <h3>Datos de entrega</h3>
-      <form onSubmit={submit} noValidate style={{ display: "grid", gap: 8, maxWidth: 520 }}>
-        <div className="form__grp">
-          <label htmlFor="ck-name">Nombre</label>
-          <input
-            id="ck-name"
-            name="delivery_nombre"
-            value={form.delivery_nombre}
-            onChange={onChange}
-            placeholder="Nombre"
-            autoComplete="name"
-            required
-            spellCheck={false}
-          />
-          {errors.delivery_nombre && <div className="form-error">{errors.delivery_nombre}</div>}
-        </div>
+          <h3>Datos de entrega</h3>
+          <form onSubmit={submit} noValidate style={{ display: "grid", gap: 8, maxWidth: 520 }}>
+            <div className="form__grp">
+              <label htmlFor="ck-name">Nombre</label>
+              <input
+                id="ck-name"
+                name="delivery_nombre"
+                value={form.delivery_nombre}
+                onChange={onChange}
+                placeholder="Nombre"
+                autoComplete="name"
+                required
+                spellCheck={false}
+              />
+              {errors.delivery_nombre && <div className="form-error">{errors.delivery_nombre}</div>}
+            </div>
 
-        <div className="form__grp">
-          <label htmlFor="ck-tel">Teléfono</label>
-          <input
-            id="ck-tel"
-            name="delivery_telefono"
-            type="tel"
-            inputMode="tel"
-            value={form.delivery_telefono}
-            onChange={onChange}
-            placeholder="+51 999 888 777"
-            pattern="[\d+\-\s]{6,20}"
-            required
-            aria-invalid={Boolean(errors.delivery_telefono)}
-            spellCheck={false}
-          />
-          {errors.delivery_telefono && <div className="form-error">{errors.delivery_telefono}</div>}
-        </div>
+            <div className="form__grp">
+              <label htmlFor="ck-tel">Teléfono</label>
+              <input
+                id="ck-tel"
+                name="delivery_telefono"
+                type="tel"
+                inputMode="tel"
+                value={form.delivery_telefono}
+                onChange={onChange}
+                placeholder="+51 999 888 777"
+                pattern="[\d+\-\s]{6,20}"
+                required
+                aria-invalid={Boolean(errors.delivery_telefono)}
+                spellCheck={false}
+              />
+              {errors.delivery_telefono && <div className="form-error">{errors.delivery_telefono}</div>}
+            </div>
 
-        <div className="form__grp">
-          <label htmlFor="ck-addr">Dirección</label>
-          <input
-            id="ck-addr"
-            name="delivery_direccion"
-            value={form.delivery_direccion}
-            onChange={onChange}
-            placeholder="Dirección"
-            autoComplete="street-address"
-            required
-            spellCheck={false}
-          />
-          {errors.delivery_direccion && <div className="form-error">{errors.delivery_direccion}</div>}
-        </div>
+            <div className="form__grp">
+              <label htmlFor="ck-addr">Dirección</label>
+              <input
+                id="ck-addr"
+                name="delivery_direccion"
+                value={form.delivery_direccion}
+                onChange={onChange}
+                placeholder="Dirección"
+                autoComplete="street-address"
+                required
+                spellCheck={false}
+              />
+              {errors.delivery_direccion && <div className="form-error">{errors.delivery_direccion}</div>}
+            </div>
 
-        <div className="form__grp">
-          <label htmlFor="ck-notes">Notas (opcional)</label>
-          <textarea
-            id="ck-notes"
-            name="notas"
-            value={form.notas}
-            onChange={onChange}
-            placeholder="Notas (opcional)"
-            maxLength={200}
-            spellCheck={false}
-          />
-        </div>
+            <div className="form__grp">
+              <label htmlFor="ck-notes">Notas (opcional)</label>
+              <textarea
+                id="ck-notes"
+                name="notas"
+                value={form.notas}
+                onChange={onChange}
+                placeholder="Notas (opcional)"
+                maxLength={200}
+                spellCheck={false}
+              />
+            </div>
 
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={!canSubmit}
-          aria-disabled={!canSubmit}
-        >
-          {submitting ? "Creando…" : "Confirmar pedido"}
-        </button>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={!canSubmit}
+              aria-disabled={!canSubmit}
+            >
+              {submitting ? "Creando…" : "Confirmar pedido"}
+            </button>
 
-        {msg && (
-          <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
-            {msg}
+            {msg && (
+              <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
+                {msg}
+              </div>
+            )}
+          </form>
+
+          {done && (
+            <div style={{ marginTop: 16 }} role="region" aria-label="Pedido creado">
+              <b>¡Pedido creado!</b>
+              <div>Código: {done.code}</div>
+              <div>Total: {PEN.format(Number(done.total))}</div>
+              <div>Estado: {done.status}</div>
+              <div>
+                Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString("es-PE")}
+              </div>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {/* Gate / Burbuja para iniciar sesión o registrarse */}
+      {showGate && (
+        <div className="pmodal__backdrop" role="dialog" aria-modal="true" aria-label="Autenticación requerida">
+          <div className="pmodal" style={{ maxWidth: 520 }}>
+            <div className="pmodal__header">
+              <div className="pmodal__brandPh">SR</div>
+              <h3 className="pmodal__title">Inicia sesión para continuar</h3>
+            </div>
+
+            <div className="pmodal__body">
+              <p className="hint" style={{ marginTop: 0 }}>
+                Para confirmar tu pedido necesitamos identificarte. Puedes iniciar sesión si ya tienes cuenta
+                o crear una nueva en segundos.
+              </p>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+                <button className="btn btn-primary" onClick={goLogin} autoFocus>
+                  Iniciar sesión
+                </button>
+                <button className="btn btn-accent" onClick={goRegister}>
+                  Registrarme
+                </button>
+              </div>
+
+              <p className="hint" style={{ marginTop: 10 }}>
+                Te devolveremos a tu ticket después de autenticarte.
+              </p>
+            </div>
           </div>
-        )}
-      </form>
-
-      {done && (
-        <div style={{ marginTop: 16 }} role="region" aria-label="Pedido creado">
-          <b>¡Pedido creado!</b>
-          <div>Código: {done.code}</div>
-          <div>Total: {PEN.format(Number(done.total))}</div>
-          <div>Estado: {done.status}</div>
-          <div>
-            Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString("es-PE")}
-          </div>
         </div>
       )}
-    </main>
+    </>
   );
 }

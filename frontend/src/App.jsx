@@ -1,7 +1,6 @@
 // src/App.jsx
-import { Link, Route, Routes, useNavigate } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
-import { apix } from './api/api';
+import { Link, Route, Routes } from 'react-router-dom';
+import { useState } from 'react';
 import LeftRail from "./LeftRail";
 import Historia from "./Historia";
 import { useAuth } from './AuthContext.jsx';
@@ -9,7 +8,8 @@ import { useCart } from './CartContext.jsx';
 import Catalogo from './Catalogo.jsx';
 import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
-import ProfileModal from './ProfileModal.jsx'; // <-- NUEVO
+import Orders from './Orders.jsx';          
+import ProfileModal from './ProfileModal.jsx';
 
 function Header({ onOpenProfile }) {
   const { isAuthenticated, firstName, user, logout } = useAuth();
@@ -60,47 +60,6 @@ function Header({ onOpenProfile }) {
   );
 }
 
-function Orders() {
-  const { token, isAuthenticated } = useAuth();
-  const [list, setList] = useState([]);
-  const nav = useNavigate();
-
-  // Formateador de moneda local (PEN)
-  const PEN = useMemo(
-    () => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }),
-    []
-  );
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!isAuthenticated) { nav('/login'); return; }
-      try {
-        const data = await apix.myOrders(token);
-        if (alive) setList(Array.isArray(data) ? data : []);
-      } catch (e) {}
-    })();
-    return () => { alive = false; };
-  }, [isAuthenticated, token, nav]);
-
-  return (
-    <section style={{maxWidth:800, margin:'2rem auto', padding:'0 1rem', color:'#2a2a2a'}}>
-      <h2>Mis pedidos</h2>
-      {list.length === 0 ? <p>No tienes pedidos.</p> : (
-        <ul style={{lineHeight:1.8, paddingLeft: '1rem'}}>
-          {list.map(o => (
-            <li key={o._id ?? o.code}>
-              <b>{o.code ?? "—"}</b> — {o.status ?? "sin estado"} — {PEN.format(Number(o.total ?? 0))} — {
-                new Date(o.createdAt ?? o.creadoAt ?? o.fecha ?? Date.now()).toLocaleString('es-PE')
-              }
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 export default function App() {
   const [openProfile, setOpenProfile] = useState(false);
 
@@ -110,7 +69,7 @@ export default function App() {
       <LeftRail />
 
       {/* Landmarks: el main tiene id="main" para el skiplink */}
-      <div role="none"> {/* wrapper opcional para layout */}
+      <div role="none">
         <Routes>
           <Route path="/" element={<main id="main"><Catalogo /></main>} />
           <Route path="/login" element={<main id="main"><Login /></main>} />
