@@ -157,11 +157,17 @@ export const apix = {
 
   /* ========== Alias “Admin” sin 404 ========== */
   // Estos alias usan las rutas existentes para evitar /api/admin/* inexistentes.
+// en src/api/api.js
   adminListProducts(token) {
-    // Igual que getProductos, pero exige token por si el backend valida rol
     return handle(async () => {
-      const data = await api("/api/productos", { headers: { ...authHeader(token) } });
-      return Array.isArray(data) ? data.map(mapProduct) : [];
+      // intenta con ?all=1; si falla, usa /api/productos normal
+      try {
+        const data = await api("/api/productos?all=1", { headers: { ...authHeader(token) } });
+        return Array.isArray(data) ? data.map(mapProduct) : [];
+      } catch {
+        const data = await api("/api/productos", { headers: { ...authHeader(token) } });
+        return Array.isArray(data) ? data.map(mapProduct) : [];
+      }
     });
   },
 
