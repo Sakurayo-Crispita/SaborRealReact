@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 from bson import ObjectId
 from typing import Any
 import re
+from pydantic import BaseModel
+from ..schemas import OrderCreate, OrderOut, CartItem, OrderStatus 
 
 
 from .. import database
@@ -125,15 +127,17 @@ admin = _APIRouter(prefix="/api/admin/orders", tags=["admin:orders"])
 
 @admin.get("", response_model=list[OrderOut])
 async def admin_list_orders(user = Depends(_require_admin)):
+    # Colección unificada: "pedidos"
     cur = database.db.pedidos.find({}).sort("createdAt", -1)
-    out = []
+    out: list[dict[str, Any]] = []
     async for o in cur:
         out.append({
             "_id": str(o["_id"]),
             "code": o.get("code"),
             "total": float(o.get("total", 0)),
             "status": o.get("status", "CREATED"),
-            "creadoAt": o.get("createdAt"),
+            # Para mantener compat con el front que usa 'creadoAt'
+            "creadoAt": o.get("createdAt") or o.get("creadoAt"),
         })
     return out
 
@@ -142,20 +146,37 @@ async def admin_order_detail(order_id: str, user = Depends(_require_admin)):
     o = await database.db.pedidos.find_one({"_id": _oid(order_id)})
     if not o:
         raise HTTPException(404, "Pedido no encontrado")
+
+    # Serializa ObjectIds y preserva campos útiles
     o["_id"] = str(o["_id"])
     if "userId" in o:
         o["userId"] = str(o["userId"])
+    # compat de nombres de fecha/estado
+    if "createdAt" in o and "creadoAt" not in o:
+        o["creadoAt"] = o["createdAt"]
+    if "estado" in o and "status" not in o:
+        o["status"] = o["estado"]
+
     return o
 
 class _StatusPatch(BaseModel):
-    status: OrderStatus
+    status: OrderStatus  # "CREATED" | "PAID" | "CANCELLED" | "DELIVERED"
 
 @admin.patch("/{order_id}")
 async def admin_update_status(order_id: str, body: _StatusPatch, user = Depends(_require_admin)):
     res = await database.db.pedidos.update_one(
         {"_id": _oid(order_id)},
-        {"$set": {"status": body.status}}
+        {"$set": {"status": body.status, "estado": body.status}}
     )
     if res.matched_count == 0:
         raise HTTPException(404, "Pedido no encontrado")
-    return {"ok": True}
+
+    doc = await database.db.pedidos.find_one({"_id": _oid(order_id)})
+    doc["_id"] = str(doc["_id"])
+    return {
+        "_id": doc["_id"],
+        "code": doc.get("code"),
+        "total": float(doc.get("total", 0)),
+        "status": doc.get("status"),
+        "creadoAt": doc.get("createdAt") or doc.get("creadoAt"),
+    }
