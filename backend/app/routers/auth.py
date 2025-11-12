@@ -1,12 +1,13 @@
 # app/routers/auth.py
 from fastapi import APIRouter, HTTPException, Header, Depends
-from pydantic import BaseModel, EmailStr, constr
+from pydantic import BaseModel, EmailStr, constr, Field  
 from datetime import datetime, timedelta, timezone
 import os, jwt
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from bson import ObjectId
 from bson.errors import InvalidId
 from typing import Optional
+from jwt import ExpiredSignatureError, InvalidTokenError
 
     
 from .. import database             
@@ -65,8 +66,9 @@ async def get_current_user_id(
     token = credentials.credentials
     try:
         data = jwt.decode(token, SECRET_KEY, algorithms=[ALGO])
-    except Exception as e:
-        print("JWT decode error:", repr(e))
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expirado")
+    except InvalidTokenError:
         raise HTTPException(status_code=401, detail="Token inválido")
 
     user_id = data.get("sub")
@@ -129,22 +131,25 @@ async def me(user = Depends(get_current_user)):
         "fecha_nacimiento": user.get("fecha_nacimiento"),
     }
 
+# app/routers/auth.py  (reemplaza tu update_me por este)
 @router.put("/me")
 async def update_me(payload: ProfileUpdate, user = Depends(get_current_user)):
     uid = ObjectId(user["_id"])
     updates = {k: v for k, v in payload.dict().items() if v is not None}
 
+    # 1) Validación previa del avatar (si viene como dataURL)
+    av = updates.get("avatarUrl")
+    if isinstance(av, str) and av.startswith("data:image"):
+        if len(av) > 1_000_000:  # ~1MB en caracteres
+            raise HTTPException(status_code=413, detail="Avatar demasiado grande")
+
+    # 2) Ahora sí, aplicar cambios
     if updates:
         res = await database.db.clientes.update_one({"_id": uid}, {"$set": updates})
         if not res.acknowledged:
             raise HTTPException(status_code=500, detail="No se pudo actualizar el perfil")
 
-    # justo después de construir `updates`
-    if updates.get("avatarUrl") and str(updates["avatarUrl"]).startswith("data:image"):
-        if len(updates["avatarUrl"]) > 1_000_000:  # ~1MB en caracteres
-            raise HTTPException(status_code=413, detail="Avatar demasiado grande")
-
-    # vuelve a leer y devuelve el perfil completo y consistente con GET /me
+    # 3) Leer de vuelta y devolver en el mismo formato que GET /me
     u = await database.db.clientes.find_one({"_id": uid})
     if not u:
         raise HTTPException(status_code=500, detail="Usuario no encontrado tras update")
@@ -160,6 +165,7 @@ async def update_me(payload: ProfileUpdate, user = Depends(get_current_user)):
         "genero": u.get("genero"),
         "fecha_nacimiento": u.get("fecha_nacimiento"),
     }
+
 
 
 @router.patch("/change-password")
