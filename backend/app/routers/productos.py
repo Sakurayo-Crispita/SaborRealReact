@@ -71,12 +71,13 @@ async def admin_delete_product(product_id: str, user = Depends(require_admin)):
 @admin.patch("/{product_id}", response_model=ProductoOut)
 async def admin_patch_product(
     product_id: str,
-    payload: ProductoPatch,
-    user = Depends(require_admin),
+    payload: dict,                  # parcial
+    user = Depends(require_admin)
 ):
-    data = _normalize_payload(payload.model_dump(exclude_unset=True))
+    # Normaliza: "disponible" -> "activo"
+    data = _normalize_payload(payload or {})
     if not data:
-        raise HTTPException(status_code=400, detail="Nada para actualizar")
+        raise HTTPException(status_code=422, detail="Nada que actualizar")
 
     res = await database.db.productos.update_one(
         {"_id": _oid(product_id)},

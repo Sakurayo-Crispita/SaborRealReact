@@ -21,10 +21,12 @@ def _oid(s: str) -> ObjectId:
 def _order_code() -> str:
     return datetime.now(timezone.utc).strftime("SR-%Y%m%d-%H%M%S")
 
+# app/routers/orders.py
+
 async def _calc_total_snapshot_and_reserve(items: list[CartItem]) -> tuple[float, list[dict[str, Any]]]:
     """
-    Valida items (solo productos activos), verifica y descuenta stock (update atómico),
-    calcula total y devuelve snapshot por ítem.
+    Versión sin inventario: no valida ni descuenta stock.
+    Solo verifica que el producto exista y esté activo, y calcula totales.
     """
     total = 0.0
     snapshot: list[dict[str, Any]] = []
@@ -33,12 +35,6 @@ async def _calc_total_snapshot_and_reserve(items: list[CartItem]) -> tuple[float
         prod = await database.db.productos.find_one({"_id": _oid(it.producto_id), "activo": True})
         if not prod:
             raise HTTPException(400, f"Producto no disponible: {it.producto_id}")
-        upd = await database.db.productos.update_one(
-            {"_id": prod["_id"], "stock": {"$gte": it.qty}},
-            {"$inc": {"stock": -it.qty}}
-        )
-        if upd.matched_count == 0:
-            raise HTTPException(409, f"Sin stock suficiente para {prod.get('nombre', it.producto_id)}")
 
         precio = float(prod.get("precio", 0))
         subtotal = precio * it.qty
