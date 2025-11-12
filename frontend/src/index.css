@@ -429,3 +429,21 @@ button:disabled, .btn:disabled{
   .receipt { box-shadow: none; border: none; }
   body { background: #fff; }
 }
+@media print {
+  /* Oculta todo por defecto */
+  body * { display: none !important; }
+
+  /* Muestra solo la boleta marcada como objetivo de impresión */
+  .receipt.print-target, .receipt.print-target * {
+    display: revert !important;
+    visibility: visible !important;
+  }
+
+  .receipt.print-target {
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
