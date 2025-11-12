@@ -230,14 +230,15 @@ export default function Admin() {
     }
   }
 
-  async function toggleDisponible(p) {
+    async function toggleDisponible(p) {
     try {
-      await apix.adminUpsertProduct(token, { _id: p._id, disponible: !p.disponible });
-      setItems((lst) => lst.map((x) => (x._id === p._id ? { ...x, disponible: !p.disponible } : x)));
+        await apix.adminPatchProduct(token, p._id, { disponible: !p.disponible });
+        setItems(lst => lst.map(x => x._id === p._id ? { ...x, disponible: !p.disponible } : x));
     } catch (e) {
-      setMsg(`❌ No se pudo actualizar disponibilidad: ${e.message || "error"}`);
+        setMsg(`❌ No se pudo actualizar disponibilidad: ${e.message || "error"}`);
     }
-  }
+    }
+
 
   return (
     <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>

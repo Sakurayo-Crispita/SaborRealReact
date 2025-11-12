@@ -16,7 +16,8 @@ const handle = async (fn) => {
   try {
     return await fn();
   } catch (e) {
-    const msg = typeof e?.message === "string" && e.message ? e.message : "Error de red";
+    const msg =
+      typeof e?.message === "string" && e.message ? e.message : "Error de red";
     throw new Error(msg);
   }
 };
@@ -73,7 +74,7 @@ export const apix = {
     );
   },
 
-  /* ========== Productos ========== */
+  /* ========== Productos (público/cliente) ========== */
   getProductos(categoria = "") {
     return handle(async () => {
       const q = categoria ? `?categoria=${encodeURIComponent(categoria)}` : "";
@@ -82,7 +83,7 @@ export const apix = {
     });
   },
 
-  // Crear o actualizar producto (si tu backend soporta PUT /api/productos/:id)
+  // (Si usas estos endpoints públicos, los dejo tal cual)
   upsertProducto(token, payload) {
     const id = payload._id || payload.id;
     if (id) {
@@ -155,66 +156,68 @@ export const apix = {
     );
   },
 
-// ===== ADMIN =====
-adminListProducts(token) {
-  return handle(async () => {
-    try {
-      const data = await api("/api/productos?all=1", { headers: { ...authHeader(token) } });
-      return Array.isArray(data) ? data.map(mapProduct) : [];
-    } catch {
-      const data = await api("/api/productos", { headers: { ...authHeader(token) } });
-      return Array.isArray(data) ? data.map(mapProduct) : [];
-    }
-  });
-},
+  // ===== ADMIN (CRUD productos y utilidades) =====
 
-adminUpsertProduct(token, payload) {
-  return handle(async () => {
-    const { _id, ...rest } = payload ?? {};
-    // Si hay _id intentamos PUT /admin/products/:id
-    if (_id) {
-      try {
-        return await api(`/api/admin/products/${encodeURIComponent(_id)}`, {
-          method: "PUT",
-          headers: { ...authHeader(token) },
-          body: JSON.stringify(rest),
-        });
-      } catch (e) {
-        // Fallback: algunos backends aceptan POST con _id para editar
-        return await api("/api/admin/products", {
-          method: "POST",
-          headers: { ...authHeader(token) },
-          body: JSON.stringify(payload),
-        });
-      }
-    }
-    // Crear
-    return await api("/api/admin/products", {
-      method: "POST",
-      headers: { ...authHeader(token) },
-      body: JSON.stringify(rest),
+  // LIST: usa el router admin real
+  adminListProducts(token) {
+    return handle(async () => {
+      const data = await api("/api/admin/products", {
+        headers: { ...authHeader(token) },
+      });
+      return Array.isArray(data) ? data.map(mapProduct) : [];
     });
-  });
-},
+  },
 
-adminDeleteProduct(token, id) {
-  return handle(() =>
-    api(`/api/admin/products/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      headers: { ...authHeader(token) },
-    })
-  );
-},
+  // CREATE (POST)
+  adminCreateProduct(token, payload) {
+    return handle(() =>
+      api("/api/admin/products", {
+        method: "POST",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
 
-  // Si tu backend tiene un endpoint para listar TODOS los pedidos (admin),
-  // cámbialo aquí. De momento reutilizamos /api/orders.
+  // UPDATE (PUT completo)
+  adminUpdateProduct(token, id, payload) {
+    return handle(() =>
+      api(`/api/admin/products/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(payload),
+      })
+    );
+  },
+
+  // PATCH parcial (ej. { disponible: false })
+  adminPatchProduct(token, id, patch) {
+    return handle(() =>
+      api(`/api/admin/products/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { ...authHeader(token) },
+        body: JSON.stringify(patch),
+      })
+    );
+  },
+
+  // DELETE
+  adminDeleteProduct(token, id) {
+    return handle(() =>
+      api(`/api/admin/products/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: { ...authHeader(token) },
+      })
+    );
+  },
+
+  // (Opcional) Admin de pedidos
   adminListOrders(token) {
     return handle(() =>
       api("/api/orders", { headers: { ...authHeader(token) } })
     );
   },
 
-  // Si tu backend soporta actualizar estado: PATCH /api/orders/:id
   adminUpdateOrderStatus(token, id, status) {
     return handle(() =>
       api(`/api/orders/${encodeURIComponent(id)}`, {
@@ -224,20 +227,9 @@ adminDeleteProduct(token, id) {
       })
     );
   },
-  
-  adminPatchProduct(token, id, patch) {
-  return handle(() =>
-    api(`/api/admin/products/${encodeURIComponent(id)}`, {
-      method: "PATCH",
-      headers: { ...authHeader(token) },
-      body: JSON.stringify(patch),
-    })
-  );
-},
 
-  // Placeholder: cambia esta ruta cuando tengas soporte en backend
+  // Placeholder clientes (cuando tengas endpoint real)
   adminListClients(token) {
-    // ⚠️ Cambia a tu endpoint real cuando exista, para evitar 404.
     return handle(() =>
       api("/api/clients", { headers: { ...authHeader(token) } })
     );
