@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import { apix } from "./api/api";
+import AccessibilityMenu from "./AccessibilityMenu.jsx"; // ← agregado
 
 /* Util: comprimir imagen a dataURL JPEG */
 async function compressImage(file, maxSize = 640, quality = 0.8) {
@@ -158,7 +159,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
                 name="categoria"
                 value={form.categoria}
                 onChange={onChange}
-                placeholder="pan, postre, bebida…"
+                placeholder="pan, postre…"
               />
             </div>
 
@@ -604,7 +605,12 @@ export default function Admin() {
 
   return (
     <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>
-      <h2 className="page-title">Panel de administración</h2>
+      {/* Header con menú de accesibilidad */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+        <h2 className="page-title">Panel de administración</h2>
+        <AccessibilityMenu />
+      </div>
+
       {msg && <p className="pmodal__msg" role="status">{msg}</p>}
 
       <div className="tabs" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
