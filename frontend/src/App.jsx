@@ -11,7 +11,7 @@ import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
 import Orders from './Orders.jsx';
 import ProfileModal from './ProfileModal.jsx';
-import AccessibilityFab from "./AccessibilityFab.jsx";
+import AccessibilityMenu from "./AccessibilityMenu.jsx";
 
 // 🔐 Admin
 import AdminRoute from "./AdminRoute.jsx";
