@@ -42,11 +42,12 @@ export default function AccessibilityMenu() {
     <>
       <button
         aria-label="Accesibilidad"
-        className="a11y-fab"
+        aria-expanded={open}
+        className="a11y-fab fab--brand fab--bottom-right"
         onClick={() => setOpen(o => !o)}
         title="Accesibilidad"
       >
-        🛠️
+        <span className="a11y-fab__icon" aria-hidden="true">♿</span>
       </button>
 
       {open && (

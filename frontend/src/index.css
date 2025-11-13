@@ -436,8 +436,6 @@ button:disabled, .btn:disabled{
 /* ===== Botón y tarjeta de accesibilidad (legible SIEMPRE) ===== */
 .a11y-fab{
   position: fixed;
-  right: 16px;
-  bottom: 16px;
   width: 48px;
   height: 48px;
   border-radius: 50%;
@@ -446,9 +444,38 @@ button:disabled, .btn:disabled{
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0,0,0,.28);
-  background: var(--btn-bg, #ef4444);   /* rojo visible sobre claro/oscuro */
+  background: var(--btn-bg, var(--primary)); /* usa color del tema */
   color: var(--btn-fg, #ffffff);
   z-index: 2000;
+
+  /* centra el icono perfectamente */
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+/* color de marca (opcional) */
+.fab--brand{ --btn-bg: var(--primary); --btn-fg: #fff; }
+
+/* posición abajo-derecha */
+.a11y-fab.fab--bottom-right{
+  right: 16px;
+  bottom: 16px;
+  left: auto;
+  top: auto;
+  transform: none;
+}
+
+/* micro-control del glifo/emoji dentro del botón */
+.a11y-fab__icon{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  font-size: 22px;      /* ajusta tamaño si quieres */
+  line-height: 1;
+  transform: translateY(0); /* si en tu SO se ve 1px bajo, usa translateY(1px) */
 }
 
 /* Contenedor que "anula" filtros globales en el panel */
