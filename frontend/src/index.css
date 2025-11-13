@@ -436,7 +436,7 @@ button:disabled, .btn:disabled{
 /* ===== Botón y tarjeta de accesibilidad (legible SIEMPRE) ===== */
 .a11y-fab{
   position: fixed;
-  right: 16px;
+  right: 16px;          /* posición por defecto: abajo-derecha */
   bottom: 16px;
   width: 48px;
   height: 48px;
@@ -446,9 +446,59 @@ button:disabled, .btn:disabled{
   line-height: 1;
   cursor: pointer;
   box-shadow: 0 8px 20px rgba(0,0,0,.28);
-  background: var(--btn-bg, #ef4444);   /* rojo visible sobre claro/oscuro */
+  background: var(--btn-bg, var(--primary));   /* ahora usa la marca por defecto */
   color: var(--btn-fg, #ffffff);
   z-index: 2000;
+  transition: transform .06s ease, filter .2s ease;
+}
+.a11y-fab:hover{ transform: translateY(-1px); filter: brightness(1.06); }
+
+/* Color de marca explícito (opcional; ya es el default, pero así puedes sobrescribir por tema) */
+.a11y-fab.fab--brand{
+  --btn-bg: var(--primary);
+  --btn-fg: #fff;
+}
+
+/* Variante: abajo-derecha explícita (por si cambias de clase y quieres volver) */
+.a11y-fab.fab--bottom-right{
+  right: 16px;
+  left: auto;
+  bottom: 16px;
+  top: auto;
+  transform: none;
+}
+
+/* Variante: centrado abajo */
+.a11y-fab.fab--bottom-center{
+  left: 50%;
+  right: auto;
+  bottom: 16px;
+  top: auto;
+  transform: translateX(-50%);
+}
+
+/* Variante: mitad del lado derecho */
+.a11y-fab.fab--mid-right{
+  right: 16px;
+  left: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+}
+
+/* En móviles, si usas mid-right, bájalo al borde inferior para que no tape contenido */
+@media (max-width: 640px){
+  .a11y-fab.fab--mid-right{
+    top: auto;
+    bottom: 16px;
+    transform: none;
+  }
+}
+
+/* Alto contraste: aseguremos contraste del FAB */
+:root[data-preset="high-contrast"] .a11y-fab{
+  --btn-bg: #ffd900;   /* amarillo alto contraste */
+  --btn-fg: #000000;
 }
 
 /* Contenedor que "anula" filtros globales en el panel */
@@ -464,8 +514,8 @@ button:disabled, .btn:disabled{
   bottom: 76px;
   width: 280px;
   background: #ffffff !important;
-  color: #111827 !important;           /* zinc-900 */
-  border: 1px solid #e5e7eb;           /* gray-200 */
+  color: #111827 !important;
+  border: 1px solid #e5e7eb;
   border-radius: 14px;
   padding: 12px;
   box-shadow: 0 14px 34px rgba(0,0,0,.28);
@@ -479,20 +529,18 @@ button:disabled, .btn:disabled{
   text-align: left;
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid #d1d5db;           /* gray-300 */
+  border: 1px solid #d1d5db;
   background: #ffffff;
   color: #111827;
   font-weight: 600;
   cursor: pointer;
 }
-.a11y-item:hover{ background:#f9fafb; } /* gray-50 */
-
+.a11y-item:hover{ background:#f9fafb; }
 .a11y-item.is-active{
-  outline: 2px solid #22c55e;          /* verde accesible */
-  background: #f0fdf4;                  /* green-50 */
+  outline: 2px solid #22c55e;
+  background: #f0fdf4;
   box-shadow: inset 0 0 0 2px rgba(34,197,94,.1);
 }
-
 .a11y-footer{ display:flex; justify-content:flex-end; margin-top: 8px; }
 .a11y-close{
   border: 1px solid #e5e7eb;
@@ -503,30 +551,7 @@ button:disabled, .btn:disabled{
   cursor: pointer;
 }
 
-/* ===== Temas activados por data-preset en <html> ===== */
-/* Alto contraste (usa variables — NO filtros — para evitar difuminar tipografía) */
-:root[data-preset="high-contrast"]{
-  --bg: #0b0b0b;
-  --panel: #111111;
-  --text: #ffffff;
-  --muted: #e5e7eb;
-  --border: #444;
-  --primary: #ffd900;
-  --accent:  #00d8ff;
-}
-
-:root[data-preset="high-contrast"] body{
-  background: var(--bg);
-  color: var(--text);
-}
-:root[data-preset="high-contrast"] a{
-  color: var(--accent);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-}
-
-/* Simulaciones de daltonismo (aplica filtro global).
-   El panel (.a11y-fixed) queda excluido por las reglas anteriores. */
+/* Simulaciones de daltonismo (mantienes tus reglas) */
 :root[data-preset="protanopia"]  body{ filter: url("#protanopia-matrix"); }
 :root[data-preset="deuteranopia"] body{ filter: url("#deuteranopia-matrix"); }
 :root[data-preset="tritanopia"]   body{ filter: url("#tritanopia-matrix"); }
