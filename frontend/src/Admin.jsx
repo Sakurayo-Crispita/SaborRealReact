@@ -158,7 +158,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
                 name="categoria"
                 value={form.categoria}
                 onChange={onChange}
-                placeholder="pan, postre, bebida…"
+                placeholder="pan, postre…"
               />
             </div>
 

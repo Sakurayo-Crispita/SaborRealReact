@@ -4,6 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import { apix } from "./api/api";
 
+/** Convierte el valor de fecha del backend a Date.
+ *  - Si llega string sin zona (sin Z ni +hh:mm), se asume UTC.
+ *  - Si llega Date o string ISO con zona, se usa tal cual. */
+function toLocalDate(d) {
+  if (!d) return null;
+  if (d instanceof Date) return d;
+  if (typeof d === "string" && !/[zZ]|[+\-]\d{2}:?\d{2}$/.test(d)) {
+    return new Date(d + "Z"); // asume UTC
+  }
+  return new Date(d);
+}
+
 export default function Orders() {
   const { token, isAuthenticated } = useAuth();
   const nav = useNavigate();
@@ -15,8 +27,18 @@ export default function Orders() {
   const [loadingDetail, setLoadingDetail] = useState({}); // {orderId: bool}
   const [msg, setMsg] = useState("");
 
+  // Formateadores (PEN y fecha/hora en Lima)
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
+    []
+  );
+  const DT_LIMA = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-PE", {
+        dateStyle: "short",
+        timeStyle: "medium",
+        timeZone: "America/Lima",
+      }),
     []
   );
 
@@ -46,7 +68,7 @@ export default function Orders() {
     if (!details[id]) {
       try {
         setLoadingDetail(p => ({ ...p, [id]: true }));
-        const d = await apix.orderDetail(token, id);   // asegúrate de tener apix.orderDetail
+        const d = await apix.orderDetail(token, id);
         setDetails(p => ({ ...p, [id]: d }));
       } catch {
         setMsg("No se pudo cargar el detalle del pedido.");
@@ -60,7 +82,12 @@ export default function Orders() {
 
   function badge(status) {
     const s = String(status || "").toUpperCase();
-    const map = { CREATED:"badge--created", PAID:"badge--paid", DELIVERED:"badge--delivered", CANCELLED:"badge--cancelled" };
+    const map = {
+      CREATED: "badge--created",
+      PAID: "badge--paid",
+      DELIVERED: "badge--delivered",
+      CANCELLED: "badge--cancelled",
+    };
     return <span className={`status-badge ${map[s] || "badge--created"}`}>{s || "CREATED"}</span>;
   }
 
@@ -79,7 +106,8 @@ export default function Orders() {
         {orders.map(o => {
           const id = o._id ?? o.id ?? o.code;
           const open = !!expanded[id];
-          const created = new Date(o.createdAt ?? o.creadoAt ?? o.fecha ?? Date.now());
+          // ¡No uses el code para la hora! Toma createdAt/creadoAt y formatea en Lima
+          const created = toLocalDate(o.createdAt ?? o.creadoAt ?? o.fecha ?? Date.now());
           const d = details[id];
 
           return (
@@ -89,7 +117,7 @@ export default function Orders() {
                   <div className="receipt__brand">Sabor Real</div>
                   <div className="receipt__meta">
                     <div><b>Pedido:</b> {o.code ?? "—"}</div>
-                    <div><b>Fecha:</b> {created.toLocaleString("es-PE")}</div>
+                    <div><b>Fecha:</b> {created ? DT_LIMA.format(created) : "—"}</div>
                   </div>
                 </div>
                 <div className="receipt__right">
