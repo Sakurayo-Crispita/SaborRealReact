@@ -1,4 +1,3 @@
-// src/Checkout.jsx
 import { useMemo, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { useCart } from "./CartContext.jsx";
@@ -9,7 +8,7 @@ const TEL_RGX = /^[\d+\-\s]{6,20}$/;
 
 export default function Checkout() {
   const { token, isAuthenticated } = useAuth();
-  const { items, total, clear } = useCart();
+  const { items, total, clear, inc, dec, setQty, removeItem } = useCart();
   const nav = useNavigate();
   const loc = useLocation();
 
@@ -24,14 +23,13 @@ export default function Checkout() {
   const [msg, setMsg] = useState("");
   const [errors, setErrors] = useState({});
 
-  // Formateador PEN (Perú)
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
     []
   );
 
   const cartEmpty = items.length === 0;
-  const showGate = !isAuthenticated; // ← si no está autenticado, mostrar burbuja
+  const showGate = !isAuthenticated; // si no está autenticado, mostramos el gate
 
   function onChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -40,9 +38,9 @@ export default function Checkout() {
   }
 
   const canSubmit = useMemo(() => {
-    if (submitting || cartEmpty) return false;                      // CP15
+    if (submitting || cartEmpty) return false;
     if (!form.delivery_nombre.trim()) return false;
-    if (!TEL_RGX.test(form.delivery_telefono.trim())) return false; // CP14
+    if (!TEL_RGX.test(form.delivery_telefono.trim())) return false;
     if (form.delivery_direccion.trim().length < 5) return false;
     return true;
   }, [submitting, cartEmpty, form]);
@@ -54,7 +52,7 @@ export default function Checkout() {
 
     if (!form.delivery_nombre.trim()) local.delivery_nombre = "Ingresa tu nombre.";
     if (!TEL_RGX.test(form.delivery_telefono.trim()))
-      local.delivery_telefono = "Teléfono inválido (usa dígitos, +, espacios o guiones)."; // CP14
+      local.delivery_telefono = "Teléfono inválido (usa dígitos, +, espacios o guiones).";
     if (form.delivery_direccion.trim().length < 5)
       local.delivery_direccion = "Dirección muy corta.";
 
@@ -62,7 +60,7 @@ export default function Checkout() {
       setErrors(local);
       return;
     }
-    if (cartEmpty) {                                               // CP15
+    if (cartEmpty) {
       setMsg("Tu ticket está vacío.");
       return;
     }
@@ -87,7 +85,12 @@ export default function Checkout() {
       const o = await apix.createOrder(token, payload);
       setDone(o);
       clear();
-      setForm({ delivery_nombre: "", delivery_telefono: "", delivery_direccion: "", notas: "" });
+      setForm({
+        delivery_nombre: "",
+        delivery_telefono: "",
+        delivery_direccion: "",
+        notas: "",
+      });
       setMsg("✅ ¡Pedido confirmado!");
     } catch (err) {
       setMsg(`❌ No se pudo crear el pedido: ${err?.message || "error de red"}`);
@@ -118,33 +121,92 @@ export default function Checkout() {
               <thead>
                 <tr>
                   <th align="left">Producto</th>
-                  <th>Qty</th>
                   <th>Precio</th>
+                  <th style={{ minWidth: 160 }}>Qty</th>
                   <th>Subtotal</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {items.map((it) => {
-                  const nombre = it.nombre ?? it.title ?? "Producto";
-                  const precio = Number(it.precio ?? it.price ?? 0);
-                  return (
-                    <tr key={it._id || it.id}>
-                      <td>{nombre}</td>
-                      <td align="center">{it.qty}</td>
-                      <td align="right">{PEN.format(precio)}</td>
-                      <td align="right">{PEN.format(precio * it.qty)}</td>
-                    </tr>
-                  );
-                })}
+                {items.map((it) => (
+                  <tr key={it._id || it.id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {it.imagenUrl && (
+                          <img
+                            src={it.imagenUrl}
+                            alt=""
+                            width="44"
+                            height="32"
+                            style={{
+                              objectFit: "cover",
+                              borderRadius: 6,
+                              border: "1px solid var(--border)",
+                            }}
+                          />
+                        )}
+                        <div>{it.nombre ?? it.title ?? "Producto"}</div>
+                      </div>
+                    </td>
+
+                    <td align="center">{PEN.format(Number(it.precio ?? it.price ?? 0))}</td>
+
+                    <td align="center">
+                      <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                        <button
+                          className="btn btn-outline-secondary"
+                          type="button"
+                          onClick={() => dec(it._id || it.id)}
+                          aria-label={`Disminuir ${it.nombre}`}
+                        >
+                          –
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={it.qty}
+                          onChange={(e) => setQty(it._id || it.id, e.target.value)}
+                          style={{ width: 64, textAlign: "center" }}
+                          aria-label={`Cantidad de ${it.nombre}`}
+                        />
+                        <button
+                          className="btn btn-outline-secondary"
+                          type="button"
+                          onClick={() => inc(it._id || it.id)}
+                          aria-label={`Aumentar ${it.nombre}`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </td>
+
+                    <td align="center">
+                      {PEN.format((Number(it.precio ?? it.price ?? 0)) * (Number(it.qty) || 1))}
+                    </td>
+
+                    <td align="right">
+                      <button
+                        className="btn btn-accent"
+                        type="button"
+                        onClick={() => removeItem(it._id || it.id)}
+                        aria-label={`Eliminar ${it.nombre}`}
+                      >
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
+
               <tfoot>
                 <tr>
                   <td colSpan={3} align="right">
                     <b>Total</b>
                   </td>
-                  <td align="right">
+                  <td align="center">
                     <b aria-live="polite">{PEN.format(total)}</b>
                   </td>
+                  <td />
                 </tr>
               </tfoot>
             </table>
@@ -215,14 +277,26 @@ export default function Checkout() {
               />
             </div>
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!canSubmit}
-              aria-disabled={!canSubmit}
-            >
-              {submitting ? "Creando…" : "Confirmar pedido"}
-            </button>
+            <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={!canSubmit}
+                aria-disabled={!canSubmit}
+              >
+                {submitting ? "Creando…" : "Confirmar pedido"}
+              </button>
+
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={clear}
+                disabled={items.length === 0 || submitting}
+                aria-disabled={items.length === 0 || submitting}
+              >
+                Vaciar ticket
+              </button>
+            </div>
 
             {msg && (
               <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
@@ -238,7 +312,8 @@ export default function Checkout() {
               <div>Total: {PEN.format(Number(done.total))}</div>
               <div>Estado: {done.status}</div>
               <div>
-                Creado: {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString("es-PE")}
+                Creado:{" "}
+                {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString("es-PE")}
               </div>
             </div>
           )}
@@ -256,8 +331,8 @@ export default function Checkout() {
 
             <div className="pmodal__body">
               <p className="hint" style={{ marginTop: 0 }}>
-                Para confirmar tu pedido necesitamos identificarte. Puedes iniciar sesión si ya tienes cuenta
-                o crear una nueva en segundos.
+                Para confirmar tu pedido necesitamos identificarte. Puedes iniciar sesión si ya tienes
+                cuenta o crear una nueva en segundos.
               </p>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
