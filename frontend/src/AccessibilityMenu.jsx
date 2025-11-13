@@ -11,14 +11,13 @@ const PRESETS = [
 
 function applyPreset(id) {
   const root = document.documentElement;
-  root.dataset.preset = id;
+  root.dataset.preset = id;          
   localStorage.setItem("a11y:preset", id);
 }
 
 export default function AccessibilityMenu() {
   const [open, setOpen] = useState(false);
   const [preset, setPreset] = useState("normal");
-
   useEffect(() => {
     const saved = localStorage.getItem("a11y:preset") || "normal";
     setPreset(saved);
@@ -26,7 +25,9 @@ export default function AccessibilityMenu() {
   }, []);
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     if (open) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
@@ -41,12 +42,11 @@ export default function AccessibilityMenu() {
     <>
       <button
         aria-label="Accesibilidad"
-        aria-expanded={open}
-        className="a11y-fab fab--brand fab--bottom-center"
+        className="a11y-fab"
         onClick={() => setOpen(o => !o)}
         title="Accesibilidad"
       >
-        ♿
+        🛠️
       </button>
 
       {open && (
