@@ -11,22 +11,19 @@ const PRESETS = [
 
 function applyPreset(id) {
   const root = document.documentElement;
-  root.dataset.preset = id;               // <html data-preset="...">
+  root.dataset.preset = id;          
   localStorage.setItem("a11y:preset", id);
 }
 
 export default function AccessibilityMenu() {
   const [open, setOpen] = useState(false);
   const [preset, setPreset] = useState("normal");
-
-  // Cargar preferencia guardada
   useEffect(() => {
     const saved = localStorage.getItem("a11y:preset") || "normal";
     setPreset(saved);
     applyPreset(saved);
   }, []);
 
-  // Cerrar con Escape
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") setOpen(false);
@@ -49,11 +46,10 @@ export default function AccessibilityMenu() {
         onClick={() => setOpen(o => !o)}
         title="Accesibilidad"
       >
-        ♿
+        🛠️
       </button>
 
       {open && (
-        // a11y-fixed evita que el panel reciba filtros globales
         <div className="a11y-fixed">
           <div
             className="a11y-card"

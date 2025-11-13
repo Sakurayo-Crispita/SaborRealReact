@@ -5,7 +5,6 @@ import { useAuth } from "./AuthContext.jsx";
 import { apix } from "./api/api";
 
 /* ================== Utiles ================== */
-/* 1) Comprimir imagen a dataURL JPEG */
 async function compressImage(file, maxSize = 640, quality = 0.8) {
   const img = await new Promise((res, rej) => {
     const url = URL.createObjectURL(file);
@@ -25,14 +24,11 @@ async function compressImage(file, maxSize = 640, quality = 0.8) {
   return canvas.toDataURL("image/jpeg", quality);
 }
 
-/* 2) Normalizar fechas del backend
-   - Si llega sin zona (sin Z ni +05:00), la tratamos como UTC agregando "Z"
-*/
 function toLocalDate(d) {
   if (!d) return null;
   if (d instanceof Date) return d;
   if (typeof d === "string" && !/[zZ]|[+\-]\d{2}:?\d{2}$/.test(d)) {
-    return new Date(d + "Z"); // interpreta como UTC
+    return new Date(d + "Z");
   }
   return new Date(d);
 }
@@ -100,7 +96,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       descripcion: form.descripcion?.trim() || null,
       precio,
       categoria: form.categoria?.trim() || null,
-      disponible: !!form.disponible, // backend lo mapea a 'activo'
+      disponible: !!form.disponible, 
       ...(preview && preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
       ...(!pickedFile && preview && !preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
     };
@@ -424,7 +420,6 @@ function OrdersSectionGrouped({ token, onMsg }) {
     []
   );
 
-  // Formateador FIJO a America/Lima
   const DT_LIMA = useMemo(
     () =>
       new Intl.DateTimeFormat("es-PE", {
@@ -447,7 +442,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
   async function load() {
     setBusy(true);
     try {
-      const data = await apix.adminListOrders(token); // ADMIN endpoint
+      const data = await apix.adminListOrders(token); 
       setOrders(Array.isArray(data) ? data : []);
     } catch (e) {
       onMsg(`❌ No se pudieron cargar pedidos: ${e.message || "error"}`);
@@ -458,7 +453,6 @@ function OrdersSectionGrouped({ token, onMsg }) {
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-  // Agrupar por cliente (nombre + teléfono)
   const groups = useMemo(() => {
     const map = new Map();
     for (const o of orders) {
@@ -472,7 +466,6 @@ function OrdersSectionGrouped({ token, onMsg }) {
     return Array.from(map.entries()).map(([key, arr]) => {
       const [nombre, telefono] = key.split("|");
       const total = arr.reduce((s, x) => s + Number(x.total || 0), 0);
-      // más recientes primero (normalizando fecha)
       arr.sort(
         (a, b) =>
           toLocalDate(b.creadoAt ?? b.createdAt)?.getTime() -
@@ -511,7 +504,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
 
   async function openDetail(o) {
     try {
-      const full = await apix.adminOrderDetail(token, o._id); // <-- detalle real
+      const full = await apix.adminOrderDetail(token, o._id); 
       setDetailOrder(full);
       setDetailOpen(true);
     } catch (e) {
@@ -618,7 +611,7 @@ export default function Admin() {
   const nav = useNavigate();
 
   const [msg, setMsg] = useState("");
-  const [tab, setTab] = useState("productos"); // 'productos' | 'pedidos'
+  const [tab, setTab] = useState("productos"); 
 
   useEffect(() => {
     if (!isAuthenticated) { nav("/login"); return; }
