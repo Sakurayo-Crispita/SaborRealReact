@@ -4,7 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext.jsx";
 import { apix } from "./api/api";
 
-/* Util: comprimir imagen a dataURL JPEG */
+/* ================== Utiles ================== */
+/* 1) Comprimir imagen a dataURL JPEG */
 async function compressImage(file, maxSize = 640, quality = 0.8) {
   const img = await new Promise((res, rej) => {
     const url = URL.createObjectURL(file);
@@ -22,6 +23,18 @@ async function compressImage(file, maxSize = 640, quality = 0.8) {
   const ctx = canvas.getContext("2d");
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return canvas.toDataURL("image/jpeg", quality);
+}
+
+/* 2) Normalizar fechas del backend
+   - Si llega sin zona (sin Z ni +05:00), la tratamos como UTC agregando "Z"
+*/
+function toLocalDate(d) {
+  if (!d) return null;
+  if (d instanceof Date) return d;
+  if (typeof d === "string" && !/[zZ]|[+\-]\d{2}:?\d{2}$/.test(d)) {
+    return new Date(d + "Z"); // interpreta como UTC
+  }
+  return new Date(d);
 }
 
 /* ---------- MODAL PRODUCTO ---------- */
@@ -411,6 +424,17 @@ function OrdersSectionGrouped({ token, onMsg }) {
     []
   );
 
+  // Formateador FIJO a America/Lima
+  const DT_LIMA = useMemo(
+    () =>
+      new Intl.DateTimeFormat("es-PE", {
+        dateStyle: "short",
+        timeStyle: "medium",
+        timeZone: "America/Lima",
+      }),
+    []
+  );
+
   const STATUS_OPTIONS = [
     { value: "CREATED",   label: "Creado" },
     { value: "PAID",      label: "Pagado" },
@@ -434,7 +458,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
   }
   useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
-  // Agrupar por cliente (nombre + teléfono) — sin “Sin nombre”
+  // Agrupar por cliente (nombre + teléfono)
   const groups = useMemo(() => {
     const map = new Map();
     for (const o of orders) {
@@ -448,8 +472,12 @@ function OrdersSectionGrouped({ token, onMsg }) {
     return Array.from(map.entries()).map(([key, arr]) => {
       const [nombre, telefono] = key.split("|");
       const total = arr.reduce((s, x) => s + Number(x.total || 0), 0);
-      // más recientes primero
-      arr.sort((a,b) => new Date(b.creadoAt || b.createdAt) - new Date(a.creadoAt || a.createdAt));
+      // más recientes primero (normalizando fecha)
+      arr.sort(
+        (a, b) =>
+          toLocalDate(b.creadoAt ?? b.createdAt)?.getTime() -
+          toLocalDate(a.creadoAt ?? a.createdAt)?.getTime()
+      );
       return { key, nombre, telefono, items: arr, total };
     });
   }, [orders]);
@@ -544,7 +572,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
                   </thead>
                   <tbody>
                     {g.items.map(o => {
-                      const when = new Date(o.creadoAt || o.createdAt || Date.now());
+                      const created = toLocalDate(o.creadoAt ?? o.createdAt ?? Date.now());
                       const st = normStatus(o);
                       return (
                         <tr key={o._id}>
@@ -562,7 +590,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
                               ))}
                             </select>
                           </td>
-                          <td align="center">{when.toLocaleString()}</td>
+                          <td align="center">{created ? DT_LIMA.format(created) : "—"}</td>
                           <td align="right">
                             <button className="btn btn-outline-secondary" onClick={() => openDetail(o)}>
                               Ver
