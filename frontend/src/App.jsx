@@ -11,6 +11,7 @@ import Login from './Login.jsx';
 import Checkout from './Checkout.jsx';
 import Orders from './Orders.jsx';
 import ProfileModal from './ProfileModal.jsx';
+import AccessibilityFab from "./AccessibilityFab.jsx";
 
 // 🔐 Admin
 import AdminRoute from "./AdminRoute.jsx";
@@ -96,6 +97,7 @@ export default function App() {
       </div>
 
       <ProfileModal open={openProfile} onClose={() => setOpenProfile(false)} />
+      <AccessibilityMenu />
     </>
   );
 }

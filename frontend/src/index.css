@@ -433,3 +433,83 @@ button:disabled, .btn:disabled{
 .admin-actions { display:flex; justify-content:flex-end; gap:8px; margin-bottom:10px; }
 
 .status-badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--border); font-size:12px; font-weight:700; }
+/* ===== Botón y tarjeta de accesibilidad ===== */
+.a11y-fab{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  background: var(--btn-bg, #f59e0b);
+  color: var(--btn-fg, #1b1b1b);
+  z-index: 1000;
+}
+.a11y-card{
+  position: fixed;
+  right: 16px;
+  bottom: 72px;
+  width: 260px;
+  background: var(--card-bg, #fff);
+  color: var(--card-fg, #111);
+  border: 1px solid var(--border, #ddd);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.25);
+  z-index: 1000;
+}
+.a11y-title{ font-weight: 700; margin-bottom: 8px; }
+.a11y-list{ display: grid; gap: 8px; }
+.a11y-item{
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border, #ddd);
+  background: var(--chip-bg, #fafafa);
+  cursor: pointer;
+}
+.a11y-item.is-active{
+  outline: 2px solid #2563eb;
+  background: #eef2ff;
+}
+.a11y-footer{ display:flex; justify-content:flex-end; margin-top: 8px; }
+.a11y-close{
+  border: 1px solid var(--border, #ddd);
+  background: #f5f5f5;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ===== Temas activados por data-preset en <html> ===== */
+/* Alto contraste (no usa filtros) */
+:root[data-preset="high-contrast"]{
+  --bg: #0b0b0b;
+  --fg: #ffffff;
+  --card-bg: #111;
+  --card-fg: #fff;
+  --border: #444;
+  --btn-bg: #ffd900;
+  --btn-fg: #000;
+  --chip-bg:#1a1a1a;
+}
+:root[data-preset="high-contrast"] body{
+  background: var(--bg);
+  color: var(--fg);
+}
+:root[data-preset="high-contrast"] a{
+  color: #00d8ff;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+}
+
+/* Simulaciones de daltonismo (aplican filtro a todo el body) */
+:root[data-preset="protanopia"] body{ filter: url("#protanopia-matrix"); }
+:root[data-preset="deuteranopia"] body{ filter: url("#deuteranopia-matrix"); }
+:root[data-preset="tritanopia"]  body{ filter: url("#tritanopia-matrix"); }
