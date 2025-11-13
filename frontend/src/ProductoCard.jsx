@@ -18,15 +18,15 @@ export default function ProductoCard({ p }) {
   const [busyCmt, setBusyCmt] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // ids accesibles
   const idText = useId();
   const idRating = useId();
 
-  // Formateador a PEN
   const PEN = useMemo(
     () => new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }),
     []
   );
+
+  const prodId = p._id || p.id;
 
   function clampStar(n) {
     const x = Number(n);
@@ -35,11 +35,14 @@ export default function ProductoCard({ p }) {
 
   async function cargarComentarios() {
     try {
-      const data = await apix.getComentarios(p._id);
+      const data = await apix.getComentarios(prodId);
       setComentarios(Array.isArray(data) ? data : []);
-    } catch {/* opcional */}
+    } catch {
+      // silencioso
+    }
   }
-  useEffect(() => { cargarComentarios(); }, [p._id]);
+
+  useEffect(() => { if (prodId) cargarComentarios(); /* eslint-disable-next-line */ }, [prodId]);
 
   async function enviarComentario(e) {
     e.preventDefault();
@@ -51,25 +54,14 @@ export default function ProductoCard({ p }) {
     }
 
     const t = texto.trim();
-    if (t.length === 0) {
-      setMsg('El comentario no puede estar vacío.');
-      return;
-    }
-    if (t.length > 200) {
-      setMsg('Máximo 200 caracteres.');
-      return;
-    }
+    if (!t) return setMsg('El comentario no puede estar vacío.');
+    if (t.length > 200) return setMsg('Máximo 200 caracteres.');
 
     const r = clampStar(rating);
-    // CP13: bloquear 0⭐ o 6⭐ explícitamente
-    if (r < 1 || r > 5) {
-      setMsg('La puntuación debe estar entre 1 y 5 estrellas.');
-      return;
-    }
 
     try {
       setBusyCmt(true);
-      await apix.createComentario(token, { producto_id: p._id, texto: t, rating: r });
+      await apix.createComentario(token, { producto_id: prodId, texto: t, rating: r });
       setTexto('');
       setRating(5);
       setMsg('💬 Comentario publicado.');
@@ -102,17 +94,9 @@ export default function ProductoCard({ p }) {
 
   return (
     <article className="card">
-      {/* Imagen */}
       <div className="thumb" aria-label={`Imagen de ${nombre}`}>
         {p.imagenUrl ? (
-          <img
-            src={p.imagenUrl}
-            alt={nombre}
-            loading="lazy"
-            decoding="async"
-            width="800"
-            height="500"
-          />
+          <img src={p.imagenUrl} alt={nombre} loading="lazy" decoding="async" width="800" height="500" />
         ) : (
           <span className="noimg">Sin imagen</span>
         )}
@@ -124,9 +108,7 @@ export default function ProductoCard({ p }) {
           {p.categoria && <span className="badge">{p.categoria}</span>}
         </div>
 
-        <p className="hint" style={{ margin: '6px 0 10px' }}>
-          {p.descripcion ?? '—'}
-        </p>
+        <p className="hint" style={{ margin: '6px 0 10px' }}>{p.descripcion ?? '—'}</p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <div className="price">{PEN.format(precio)}</div>
@@ -135,7 +117,6 @@ export default function ProductoCard({ p }) {
           </button>
         </div>
 
-        {/* Comentarios */}
         <section aria-label="Comentarios" style={{ marginTop: 14 }}>
           <h4 style={{ margin: '8px 0' }}>
             Comentarios {comentarios.length > 0 ? `(${comentarios.length})` : ''}
@@ -144,23 +125,23 @@ export default function ProductoCard({ p }) {
           {comentarios.length === 0 ? (
             <small className="hint">Aún no hay comentarios.</small>
           ) : (
-            <ul style={{ paddingLeft: 18, color: '#ddd', margin: 0 }}>
-              {comentarios.map(c => (
-                <li key={c._id} style={{ margin: '4px 0' }}>
-                  <strong aria-label={`${c.rating} estrellas`}>{'★'.repeat(c.rating)}</strong>
-                  {' '}— {c.texto}
-                </li>
-              ))}
+            <ul style={{ paddingLeft: 18, margin: 0 }}>
+              {comentarios.map((c) => {
+                const stars = Number(c.rating ?? c.puntuacion ?? 0) || 0;
+                const text = c.texto ?? c.text ?? "";
+                return (
+                  <li key={c._id || `${text}-${stars}`}>
+                    <strong aria-label={`${stars} estrellas`}>{'★'.repeat(stars)}</strong>{' '}— {text}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>
 
-        {/* Form comentario */}
         {token ? (
           <form onSubmit={enviarComentario} style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-            <small className="hint">
-              Comentando como <b>{email}</b>
-            </small>
+            <small className="hint">Comentando como <b>{email}</b></small>
 
             <div className="form__grp">
               <label htmlFor={idText}>Escribe tu opinión (máx. 200)</label>
@@ -176,11 +157,7 @@ export default function ProductoCard({ p }) {
 
             <div className="form__grp">
               <label htmlFor={idRating}>Puntuación</label>
-              <select
-                id={idRating}
-                value={rating}
-                onChange={e => setRating(clampStar(e.target.value))}
-              >
+              <select id={idRating} value={rating} onChange={e => setRating(clampStar(e.target.value))}>
                 <option value={5}>5 — Excelente</option>
                 <option value={4}>4 — Muy bueno</option>
                 <option value={3}>3 — Bueno</option>
@@ -197,7 +174,6 @@ export default function ProductoCard({ p }) {
           <small className="hint">Inicia sesión para comentar.</small>
         )}
 
-        {/* Mensajes (accesibles) */}
         {msg && (
           <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
             {msg}

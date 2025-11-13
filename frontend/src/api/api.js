@@ -5,7 +5,6 @@ import { api, authHeader } from "./client";
 const mapProduct = (doc = {}) => {
   const precio = Number(doc.price ?? doc.precio ?? 0);
   const activo = typeof doc.activo === "boolean" ? doc.activo : (doc.disponible ?? true);
-
   return {
     _id: doc.id || doc._id,
     nombre: doc.title ?? doc.nombre ?? "Producto",
@@ -124,8 +123,24 @@ export const apix = {
   },
 
   /* ========== Comentarios ========== */
-  getComentarios(productId) {
-    return handle(() => api(`/api/comentarios?producto_id=${encodeURIComponent(productId)}`));
+  // ⬇️ CAMBIO: reintenta con nombres alternativos si el backend espera otro query param
+  async getComentarios(productId) {
+    return handle(async () => {
+      const qs = [
+        `/api/comentarios?producto_id=${encodeURIComponent(productId)}`,
+        `/api/comentarios?product_id=${encodeURIComponent(productId)}`,
+        `/api/comentarios?productoId=${encodeURIComponent(productId)}`,
+      ];
+      for (const url of qs) {
+        try {
+          const data = await api(url);
+          return Array.isArray(data) ? data : [];
+        } catch {
+          // probar siguiente variante
+        }
+      }
+      return [];
+    });
   },
 
   createComentario(token, payload) {
@@ -240,7 +255,6 @@ export const apix = {
       })
     );
   },
-
 
   adminListClients(token) {
     return handle(() => api("/api/clients", { headers: { ...authHeader(token) } }));
