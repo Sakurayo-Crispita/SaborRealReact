@@ -19,11 +19,21 @@ export default function AccessibilityMenu() {
   const [open, setOpen] = useState(false);
   const [preset, setPreset] = useState("normal");
 
+  // Cargar preferencia guardada
   useEffect(() => {
     const saved = localStorage.getItem("a11y:preset") || "normal";
     setPreset(saved);
     applyPreset(saved);
   }, []);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    if (open) window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function onPick(id) {
     setPreset(id);
@@ -43,21 +53,31 @@ export default function AccessibilityMenu() {
       </button>
 
       {open && (
-        <div className="a11y-card" role="menu" aria-label="Opciones de accesibilidad">
-          <div className="a11y-title">Accesibilidad</div>
-          <div className="a11y-list">
-            {PRESETS.map(p => (
-              <button
-                key={p.id}
-                className={`a11y-item ${preset === p.id ? "is-active" : ""}`}
-                onClick={() => onPick(p.id)}
-              >
-                {p.label}
+        // a11y-fixed evita que el panel reciba filtros globales
+        <div className="a11y-fixed">
+          <div
+            className="a11y-card"
+            role="menu"
+            aria-label="Opciones de accesibilidad"
+          >
+            <div className="a11y-title">Accesibilidad</div>
+            <div className="a11y-list">
+              {PRESETS.map(p => (
+                <button
+                  key={p.id}
+                  className={`a11y-item ${preset === p.id ? "is-active" : ""}`}
+                  onClick={() => onPick(p.id)}
+                  aria-pressed={preset === p.id}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div className="a11y-footer">
+              <button className="a11y-close" onClick={() => setOpen(false)}>
+                Cerrar
               </button>
-            ))}
-          </div>
-          <div className="a11y-footer">
-            <button className="a11y-close" onClick={() => setOpen(false)}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
