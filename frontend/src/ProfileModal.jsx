@@ -13,6 +13,11 @@ function fileToDataURL(file) {
   });
 }
 
+// Permite solo dígitos, espacios, + y -
+function sanitizePhone(value) {
+  return value.replace(/[^\d+\-\s]/g, "");
+}
+
 export default function ProfileModal({ open, onClose }) {
   const { token, user, email, setUser } = useAuth(); // user puede venir de localStorage
   const [form, setForm] = useState({
@@ -48,8 +53,8 @@ export default function ProfileModal({ open, onClose }) {
   const onPickAvatar = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setMsg('El archivo debe ser una imagen.');
+    if (!file.type.startsWith("image/")) {
+      setMsg("El archivo debe ser una imagen.");
       return;
     }
     const dataUrl = await compressImage(file, 384, 0.72); // ~150–200 KB
@@ -58,7 +63,8 @@ export default function ProfileModal({ open, onClose }) {
 
   // Guardar perfil (envía solo campos soportados + avatarUrl si aplica)
   const saveProfile = async () => {
-    setBusy(true); setMsg('');
+    setBusy(true);
+    setMsg("");
     try {
       const payload = {
         nombre: form.nombre || undefined,
@@ -68,7 +74,7 @@ export default function ProfileModal({ open, onClose }) {
         fecha_nacimiento: form.fecha_nacimiento || undefined,
       };
 
-      if (avatar && avatar.startsWith('data:image/') && avatar.length < 250_000) {
+      if (avatar && avatar.startsWith("data:image/") && avatar.length < 250_000) {
         payload.avatarUrl = avatar;
       }
 
@@ -77,11 +83,11 @@ export default function ProfileModal({ open, onClose }) {
       // Refrescar /me para tener un user consistente (incluye avatarUrl si el backend lo guarda)
       const fresh = await apix.me(token);
       setUser?.(fresh);
-      localStorage.setItem('sr_user', JSON.stringify(fresh));
+      localStorage.setItem("sr_user", JSON.stringify(fresh));
 
-      setMsg('✅ Perfil actualizado.');
+      setMsg("✅ Perfil actualizado.");
     } catch (e) {
-      setMsg('❌ No se pudo actualizar el perfil.');
+      setMsg("❌ No se pudo actualizar el perfil.");
     } finally {
       setBusy(false);
     }
@@ -96,16 +102,16 @@ export default function ProfileModal({ open, onClose }) {
       i.src = url;
     });
 
-    const canvas = document.createElement('canvas');
+    const canvas = document.createElement("canvas");
     const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
     canvas.width = Math.round(img.width * ratio);
     canvas.height = Math.round(img.height * ratio);
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     // JPEG para recortar peso
-    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    const dataUrl = canvas.toDataURL("image/jpeg", quality);
     return dataUrl;
   }
 
@@ -136,13 +142,20 @@ export default function ProfileModal({ open, onClose }) {
   if (!open) return null;
 
   return (
-    <div className="pmodal__backdrop" role="dialog" aria-modal="true" onClick={onClose}>
+    <div
+      className="pmodal__backdrop"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
       <div className="pmodal" onClick={(e) => e.stopPropagation()}>
         {/* Encabezado */}
         <div className="pmodal__header">
           <div className="pmodal__brandPh">SR</div>
           <h3 className="pmodal__title">Mi Perfil</h3>
-          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">×</button>
+          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">
+            ×
+          </button>
         </div>
 
         {/* Contenido */}
@@ -150,7 +163,11 @@ export default function ProfileModal({ open, onClose }) {
           {/* Avatar (solo UI) */}
           <div className="pmodal__avatarBox">
             <div className="pmodal__avatar">
-              {avatar ? <img src={avatar} alt="Avatar" /> : <div className="pmodal__avatarPh">👤</div>}
+              {avatar ? (
+                <img src={avatar} alt="Avatar" />
+              ) : (
+                <div className="pmodal__avatarPh">👤</div>
+              )}
             </div>
             <label className="btn btn-outline-secondary btn-sm">
               Cambiar foto
@@ -164,7 +181,9 @@ export default function ProfileModal({ open, onClose }) {
               <label>Nombre de usuario</label>
               <input
                 value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+                onChange={(e) =>
+                  setForm(prev => ({ ...prev, nombre: e.target.value }))
+                }
                 placeholder="Tu nombre"
               />
             </div>
@@ -177,8 +196,16 @@ export default function ProfileModal({ open, onClose }) {
             <div className="form__grp">
               <label>Número de teléfono</label>
               <input
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9+\- ]{6,}"
                 value={form.telefono}
-                onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+                onChange={(e) =>
+                  setForm(prev => ({
+                    ...prev,
+                    telefono: sanitizePhone(e.target.value),
+                  }))
+                }
                 placeholder="+51 ..."
               />
             </div>
@@ -187,7 +214,9 @@ export default function ProfileModal({ open, onClose }) {
               <label>Dirección</label>
               <input
                 value={form.direccion}
-                onChange={(e) => setForm({ ...form, direccion: e.target.value })}
+                onChange={(e) =>
+                  setForm(prev => ({ ...prev, direccion: e.target.value }))
+                }
                 placeholder="Cajamarca, Perú"
               />
             </div>
@@ -197,7 +226,12 @@ export default function ProfileModal({ open, onClose }) {
               <input
                 type="date"
                 value={form.fecha_nacimiento}
-                onChange={(e) => setForm({ ...form, fecha_nacimiento: e.target.value })}
+                onChange={(e) =>
+                  setForm(prev => ({
+                    ...prev,
+                    fecha_nacimiento: e.target.value,
+                  }))
+                }
               />
             </div>
 
@@ -205,7 +239,9 @@ export default function ProfileModal({ open, onClose }) {
               <label>Género</label>
               <select
                 value={form.genero}
-                onChange={(e) => setForm({ ...form, genero: e.target.value })}
+                onChange={(e) =>
+                  setForm(prev => ({ ...prev, genero: e.target.value }))
+                }
               >
                 <option value="na">Prefiero no decirlo</option>
                 <option value="female">Femenino</option>
@@ -215,7 +251,11 @@ export default function ProfileModal({ open, onClose }) {
             </div>
           </div>
 
-          <button className="btn btn-primary pmodal__save" onClick={saveProfile} disabled={busy}>
+          <button
+            className="btn btn-primary pmodal__save"
+            onClick={saveProfile}
+            disabled={busy}
+          >
             {busy ? "Guardando..." : "Guardar cambios"}
           </button>
 
@@ -236,7 +276,11 @@ export default function ProfileModal({ open, onClose }) {
               <input type="password" ref={passNew2Ref} />
             </div>
           </div>
-          <button className="btn btn-accent" onClick={changePassword} disabled={busy}>
+          <button
+            className="btn btn-accent"
+            onClick={changePassword}
+            disabled={busy}
+          >
             Actualizar contraseña
           </button>
 

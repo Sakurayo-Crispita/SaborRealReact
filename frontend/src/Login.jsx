@@ -3,6 +3,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from './AuthContext.jsx';
 
+function sanitizePhone(value) {
+  // deja solo dígitos, espacios, + y -
+  return value.replace(/[^\d+\-\s]/g, '');
+}
+
 export default function Login() {
   const { login, register, isAuthenticated } = useAuth();
   const [mode, setMode] = useState('login');
@@ -28,7 +33,14 @@ export default function Login() {
   }, [isAuthenticated, nav]);
 
   function onChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name } = e.target;
+    let { value } = e.target;
+
+    if (name === 'telefono') {
+      value = sanitizePhone(value);
+    }
+
+    setForm(prev => ({ ...prev, [name]: value }));
   }
 
   async function onSubmit(e) {
@@ -37,9 +49,7 @@ export default function Login() {
     setBusy(true);
     try {
       if (mode === 'login') {
-        if (!form.email || !form.password) {
-          throw new Error('Completa email y contraseña');
-        }
+        if (!form.email || !form.password) throw new Error('Completa email y contraseña');
         await login(form.email, form.password);
       } else {
         if (!form.email || !form.password || !form.nombre) {
@@ -58,7 +68,8 @@ export default function Login() {
     } catch (err) {
       let msg = err?.message || 'Ocurrió un error';
 
-      if (typeof msg === 'string' && msg.startsWith('{"detail"')) {
+      // Si el backend envía algo como {"detail":"..."}
+      if (msg.startsWith('{"detail"')) {
         try {
           const parsed = JSON.parse(msg);
           if (parsed.detail) msg = parsed.detail;
@@ -67,7 +78,8 @@ export default function Login() {
         }
       }
 
-      if (typeof msg === 'string' && msg.includes('Credenciales inválidas')) {
+      // Personalizar mensaje de credenciales
+      if (msg.includes('Credenciales inválidas')) {
         msg = 'Correo o contraseña incorrectos. Inténtalo de nuevo.';
       }
 
@@ -75,16 +87,6 @@ export default function Login() {
     } finally {
       setBusy(false);
     }
-  }
-
-  function switchMode() {
-    setMode(m => (m === 'login' ? 'register' : 'login'));
-    // limpiar error y contraseña al cambiar
-    setError(null);
-    setForm(f => ({
-      ...f,
-      password: '',
-    }));
   }
 
   return (
@@ -149,7 +151,7 @@ export default function Login() {
                 name="telefono"
                 type="tel"
                 inputMode="numeric"
-                pattern="[0-9+\\- ]{6,}"
+                pattern="[0-9+\- ]{6,}"   // validación extra del navegador
                 value={form.telefono}
                 onChange={onChange}
                 placeholder="+51 999 999 999"
@@ -178,7 +180,7 @@ export default function Login() {
 
       <button
         style={{ marginTop: 12 }}
-        onClick={switchMode}
+        onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
       >
         Cambiar a {mode === 'login' ? 'registro' : 'login'}
       </button>

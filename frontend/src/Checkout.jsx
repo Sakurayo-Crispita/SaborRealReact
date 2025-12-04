@@ -1,3 +1,4 @@
+// src/Checkout.jsx
 import { useMemo, useState } from "react";
 import { useAuth } from "./AuthContext.jsx";
 import { useCart } from "./CartContext.jsx";
@@ -5,6 +6,11 @@ import { apix } from "./api/api";
 import { useNavigate, useLocation } from "react-router-dom";
 
 const TEL_RGX = /^[\d+\-\s]{6,20}$/;
+
+// Permite solo dígitos, espacios, + y -
+function sanitizePhone(value) {
+  return value.replace(/[^\d+\-\s]/g, "");
+}
 
 export default function Checkout() {
   const { token, isAuthenticated } = useAuth();
@@ -32,8 +38,16 @@ export default function Checkout() {
   const showGate = !isAuthenticated; // si no está autenticado, mostramos el gate
 
   function onChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    setErrors((err) => ({ ...err, [e.target.name]: null }));
+    const { name } = e.target;
+    let { value } = e.target;
+
+    // filtra letras en teléfono
+    if (name === "delivery_telefono") {
+      value = sanitizePhone(value);
+    }
+
+    setForm(prev => ({ ...prev, [name]: value }));
+    setErrors(err => ({ ...err, [name]: null }));
     setMsg("");
   }
 
@@ -70,7 +84,7 @@ export default function Checkout() {
     }
 
     const payload = {
-      items: items.map((it) => ({
+      items: items.map(it => ({
         producto_id: it._id || it.id,
         qty: Number(it.qty) || 1,
       })),
@@ -99,7 +113,7 @@ export default function Checkout() {
     }
   }
 
-  // Acciones del gate (AHORA con mode para que Login abra con la vista correcta)
+  // Acciones del gate (con mode para que Login abra con la vista correcta)
   const goLogin = () =>
     nav("/login", { state: { from: loc, mode: "login" } });
 
@@ -131,7 +145,7 @@ export default function Checkout() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((it) => (
+                {items.map(it => (
                   <tr key={it._id || it.id}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -152,7 +166,9 @@ export default function Checkout() {
                       </div>
                     </td>
 
-                    <td align="center">{PEN.format(Number(it.precio ?? it.price ?? 0))}</td>
+                    <td align="center">
+                      {PEN.format(Number(it.precio ?? it.price ?? 0))}
+                    </td>
 
                     <td align="center">
                       <div style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
@@ -168,7 +184,7 @@ export default function Checkout() {
                           type="number"
                           min="1"
                           value={it.qty}
-                          onChange={(e) => setQty(it._id || it.id, e.target.value)}
+                          onChange={e => setQty(it._id || it.id, e.target.value)}
                           style={{ width: 64, textAlign: "center" }}
                           aria-label={`Cantidad de ${it.nombre}`}
                         />
@@ -184,7 +200,9 @@ export default function Checkout() {
                     </td>
 
                     <td align="center">
-                      {PEN.format((Number(it.precio ?? it.price ?? 0)) * (Number(it.qty) || 1))}
+                      {PEN.format(
+                        (Number(it.precio ?? it.price ?? 0)) * (Number(it.qty) || 1)
+                      )}
                     </td>
 
                     <td align="right">
@@ -218,7 +236,11 @@ export default function Checkout() {
           )}
 
           <h3>Datos de entrega</h3>
-          <form onSubmit={submit} noValidate style={{ display: "grid", gap: 8, maxWidth: 520 }}>
+          <form
+            onSubmit={submit}
+            noValidate
+            style={{ display: "grid", gap: 8, maxWidth: 520 }}
+          >
             <div className="form__grp">
               <label htmlFor="ck-name">Nombre</label>
               <input
@@ -231,7 +253,9 @@ export default function Checkout() {
                 required
                 spellCheck={false}
               />
-              {errors.delivery_nombre && <div className="form-error">{errors.delivery_nombre}</div>}
+              {errors.delivery_nombre && (
+                <div className="form-error">{errors.delivery_nombre}</div>
+              )}
             </div>
 
             <div className="form__grp">
@@ -249,7 +273,9 @@ export default function Checkout() {
                 aria-invalid={Boolean(errors.delivery_telefono)}
                 spellCheck={false}
               />
-              {errors.delivery_telefono && <div className="form-error">{errors.delivery_telefono}</div>}
+              {errors.delivery_telefono && (
+                <div className="form-error">{errors.delivery_telefono}</div>
+              )}
             </div>
 
             <div className="form__grp">
@@ -264,7 +290,9 @@ export default function Checkout() {
                 required
                 spellCheck={false}
               />
-              {errors.delivery_direccion && <div className="form-error">{errors.delivery_direccion}</div>}
+              {errors.delivery_direccion && (
+                <div className="form-error">{errors.delivery_direccion}</div>
+              )}
             </div>
 
             <div className="form__grp">
@@ -302,7 +330,12 @@ export default function Checkout() {
             </div>
 
             {msg && (
-              <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
+              <div
+                className="pmodal__msg"
+                role="status"
+                aria-live="polite"
+                style={{ marginTop: 8 }}
+              >
                 {msg}
               </div>
             )}
@@ -316,7 +349,9 @@ export default function Checkout() {
               <div>Estado: {done.status}</div>
               <div>
                 Creado:{" "}
-                {new Date(done.creadoAt || done.created_at || Date.now()).toLocaleString("es-PE")}
+                {new Date(
+                  done.creadoAt || done.created_at || Date.now()
+                ).toLocaleString("es-PE")}
               </div>
             </div>
           )}
@@ -325,7 +360,12 @@ export default function Checkout() {
 
       {/* Gate / Burbuja para iniciar sesión o registrarse */}
       {showGate && (
-        <div className="pmodal__backdrop" role="dialog" aria-modal="true" aria-label="Autenticación requerida">
+        <div
+          className="pmodal__backdrop"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Autenticación requerida"
+        >
           <div className="pmodal" style={{ maxWidth: 520 }}>
             <div className="pmodal__header">
               <div className="pmodal__brandPh">SR</div>
@@ -334,11 +374,18 @@ export default function Checkout() {
 
             <div className="pmodal__body">
               <p className="hint" style={{ marginTop: 0 }}>
-                Para confirmar tu pedido necesitamos identificarte. Puedes iniciar sesión si ya tienes
-                cuenta o crear una nueva en segundos.
+                Para confirmar tu pedido necesitamos identificarte. Puedes iniciar sesión
+                si ya tienes cuenta o crear una nueva en segundos.
               </p>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 8 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                  marginTop: 8,
+                }}
+              >
                 <button className="btn btn-primary" onClick={goLogin} autoFocus>
                   Iniciar sesión
                 </button>
