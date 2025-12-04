@@ -96,7 +96,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       descripcion: form.descripcion?.trim() || null,
       precio,
       categoria: form.categoria?.trim() || null,
-      disponible: !!form.disponible, 
+      disponible: !!form.disponible,
       ...(preview && preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
       ...(!pickedFile && preview && !preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
     };
@@ -125,7 +125,13 @@ function ProductModal({ open, onClose, initial, onSave }) {
               <input type="file" accept="image/*" hidden onChange={onPickFile} />
             </label>
             {preview && (
-              <button className="btn btn-outline-secondary btn-sm" onClick={() => { setPreview(""); setPickedFile(null); }}>
+              <button
+                className="btn btn-outline-secondary btn-sm"
+                onClick={() => {
+                  setPreview("");
+                  setPickedFile(null);
+                }}
+              >
                 Quitar
               </button>
             )}
@@ -172,15 +178,29 @@ function ProductModal({ open, onClose, initial, onSave }) {
             </div>
 
             <div className="form__grp" style={{ alignItems: "center", flexDirection: "row", gap: 8 }}>
-              <input id="chk-disp" type="checkbox" name="disponible" checked={form.disponible} onChange={onChange} />
+              <input
+                id="chk-disp"
+                type="checkbox"
+                name="disponible"
+                checked={form.disponible}
+                onChange={onChange}
+              />
               <label htmlFor="chk-disp">Disponible</label>
             </div>
 
-            {err && <div className="form-error" style={{ gridColumn: "1 / -1" }}>{err}</div>}
+            {err && (
+              <div className="form-error" style={{ gridColumn: "1 / -1" }}>
+                {err}
+              </div>
+            )}
 
             <div style={{ gridColumn: "1 / -1", display: "flex", gap: 8 }}>
-              <button type="submit" className="btn btn-primary">{isEdit ? "Guardar cambios" : "Crear"}</button>
-              <button type="button" className="btn btn-outline-secondary" onClick={onClose}>Cancelar</button>
+              <button type="submit" className="btn btn-primary">
+                {isEdit ? "Guardar cambios" : "Crear"}
+              </button>
+              <button type="button" className="btn btn-outline-secondary" onClick={onClose}>
+                Cancelar
+              </button>
             </div>
           </form>
         </div>
@@ -213,10 +233,19 @@ function ProductsSection({ token, onMsg }) {
       setBusy(false);
     }
   }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, []);
 
-  function openCreate() { setEditing(null); setOpenModal(true); }
-  function openEdit(p)  { setEditing(p);   setOpenModal(true); }
+  function openCreate() {
+    setEditing(null);
+    setOpenModal(true);
+  }
+  function openEdit(p) {
+    setEditing(p);
+    setOpenModal(true);
+  }
 
   async function saveProduct(payload) {
     try {
@@ -247,7 +276,9 @@ function ProductsSection({ token, onMsg }) {
   async function toggleDisponible(p) {
     try {
       await apix.adminPatchProduct(token, p._id, { disponible: !p.disponible });
-      setItems((lst) => lst.map((x) => (x._id === p._id ? { ...x, disponible: !p.disponible } : x)));
+      setItems((lst) =>
+        lst.map((x) => (x._id === p._id ? { ...x, disponible: !p.disponible } : x))
+      );
     } catch (e) {
       onMsg(`❌ No se pudo actualizar disponibilidad: ${e.message || "error"}`);
     }
@@ -256,9 +287,17 @@ function ProductsSection({ token, onMsg }) {
   return (
     <>
       <div className="card" style={{ padding: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
           <strong>Productos</strong>
-          <button className="btn btn-primary" onClick={openCreate}>+ Nuevo producto</button>
+          <button className="btn btn-primary" onClick={openCreate}>
+            + Nuevo producto
+          </button>
         </div>
 
         <div className="receipt__tableWrap" style={{ marginTop: 8 }}>
@@ -273,45 +312,91 @@ function ProductsSection({ token, onMsg }) {
               </tr>
             </thead>
             <tbody>
-              {busy && <tr><td colSpan={5}><span className="hint">Cargando…</span></td></tr>}
-              {!busy && items.length === 0 && <tr><td colSpan={5}><span className="hint">Sin productos</span></td></tr>}
-
-              {!busy && items.map((p) => (
-                <tr key={p._id}>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      {p.imagenUrl ? (
-                        <img src={p.imagenUrl} alt="" width="36" height="24"
-                             style={{ objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }} />
-                      ) : null}
-                      <div style={{ display: "flex", flexDirection: "column" }}>
-                        <span>{p.nombre}</span>
-                        {p.descripcion && (
-                          <small className="hint" title={p.descripcion} style={{ maxWidth: 360, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                            {p.descripcion}
-                          </small>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td align="center">{PEN.format(Number(p.precio ?? 0))}</td>
-                  <td align="center">{p.categoria || "—"}</td>
-                  <td align="center">
-                    <label style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-                      <input type="checkbox" checked={!!p.disponible} onChange={() => toggleDisponible(p)} />
-                      <span className="hint">{p.disponible ? "Sí" : "No"}</span>
-                    </label>
-                  </td>
-                  <td align="right" style={{ whiteSpace: "nowrap" }}>
-                    <button className="btn btn-outline-secondary" onClick={() => openEdit(p)} style={{ marginRight: 8 }}>
-                      Editar
-                    </button>
-                    <button className="btn btn-accent" onClick={() => del(p)}>
-                      Eliminar
-                    </button>
+              {busy && (
+                <tr>
+                  <td colSpan={5}>
+                    <span className="hint">Cargando…</span>
                   </td>
                 </tr>
-              ))}
+              )}
+              {!busy && items.length === 0 && (
+                <tr>
+                  <td colSpan={5}>
+                    <span className="hint">Sin productos</span>
+                  </td>
+                </tr>
+              )}
+
+              {!busy &&
+                items.map((p) => (
+                  <tr key={p._id}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {p.imagenUrl ? (
+                          <img
+                            src={p.imagenUrl}
+                            alt=""
+                            width="36"
+                            height="24"
+                            style={{
+                              objectFit: "cover",
+                              borderRadius: 6,
+                              border: "1px solid var(--border)",
+                            }}
+                          />
+                        ) : null}
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span>{p.nombre}</span>
+                          {p.descripcion && (
+                            <small
+                              className="hint"
+                              title={p.descripcion}
+                              style={{
+                                maxWidth: 360,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              {p.descripcion}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td align="center">{PEN.format(Number(p.precio ?? 0))}</td>
+                    <td align="center">{p.categoria || "—"}</td>
+                    <td align="center">
+                      <label
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={!!p.disponible}
+                          onChange={() => toggleDisponible(p)}
+                        />
+                        <span className="hint">{p.disponible ? "Sí" : "No"}</span>
+                      </label>
+                    </td>
+                    <td align="right" style={{ whiteSpace: "nowrap" }}>
+                      <button
+                        className="btn btn-outline-secondary"
+                        onClick={() => openEdit(p)}
+                        style={{ marginRight: 8 }}
+                      >
+                        Editar
+                      </button>
+                      <button className="btn btn-accent" onClick={() => del(p)}>
+                        Eliminar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
@@ -344,17 +429,29 @@ function OrderDetailModal({ open, onClose, order }) {
         <div className="pmodal__header">
           <div className="pmodal__brandPh">SR</div>
           <h3 className="pmodal__title">Detalle del pedido</h3>
-          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">×</button>
+          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">
+            ×
+          </button>
         </div>
 
         <div className="pmodal__body" style={{ display: "grid", gap: 12 }}>
           <div className="card" style={{ padding: 12 }}>
             <strong>Entrega</strong>
             <div className="hint" style={{ marginTop: 6 }}>
-              <div><b>Nombre:</b> {d.nombre || "—"}</div>
-              <div><b>Teléfono:</b> {d.telefono || "—"}</div>
-              <div><b>Dirección:</b> {d.direccion || "—"}</div>
-              {d.notas && <div><b>Notas:</b> {d.notas}</div>}
+              <div>
+                <b>Nombre:</b> {d.nombre || "—"}
+              </div>
+              <div>
+                <b>Teléfono:</b> {d.telefono || "—"}
+              </div>
+              <div>
+                <b>Dirección:</b> {d.direccion || "—"}
+              </div>
+              {d.notas && (
+                <div>
+                  <b>Notas:</b> {d.notas}
+                </div>
+              )}
             </div>
           </div>
 
@@ -370,7 +467,11 @@ function OrderDetailModal({ open, onClose, order }) {
               </thead>
               <tbody>
                 {items.length === 0 && (
-                  <tr><td colSpan={4}><span className="hint">Sin ítems</span></td></tr>
+                  <tr>
+                    <td colSpan={4}>
+                      <span className="hint">Sin ítems</span>
+                    </td>
+                  </tr>
                 )}
                 {items.map((it, idx) => (
                   <tr key={idx}>
@@ -382,7 +483,11 @@ function OrderDetailModal({ open, onClose, order }) {
                             alt=""
                             width="36"
                             height="24"
-                            style={{ objectFit: "cover", borderRadius: 6, border: "1px solid var(--border)" }}
+                            style={{
+                              objectFit: "cover",
+                              borderRadius: 6,
+                              border: "1px solid var(--border)",
+                            }}
                           />
                         )}
                         {it.nombre || it.producto_id}
@@ -390,7 +495,11 @@ function OrderDetailModal({ open, onClose, order }) {
                     </td>
                     <td align="center">{PEN.format(Number(it.precio || 0))}</td>
                     <td align="center">{it.qty}</td>
-                    <td align="center">{PEN.format(Number(it.subtotal || (Number(it.precio||0)*Number(it.qty||0))))}</td>
+                    <td align="center">
+                      {PEN.format(
+                        Number(it.subtotal || Number(it.precio || 0) * Number(it.qty || 0))
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -414,6 +523,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
   const [openGroup, setOpenGroup] = useState({});
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState(null);
+  const [searchCode, setSearchCode] = useState(""); // 🔍 búsqueda por código
 
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
@@ -431,8 +541,8 @@ function OrdersSectionGrouped({ token, onMsg }) {
   );
 
   const STATUS_OPTIONS = [
-    { value: "CREATED",   label: "Creado" },
-    { value: "PAID",      label: "Pagado" },
+    { value: "CREATED", label: "Creado" },
+    { value: "PAID", label: "Pagado" },
     { value: "DELIVERED", label: "Entregado" },
     { value: "CANCELLED", label: "Cancelado" },
   ];
@@ -442,7 +552,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
   async function load() {
     setBusy(true);
     try {
-      const data = await apix.adminListOrders(token); 
+      const data = await apix.adminListOrders(token);
       setOrders(Array.isArray(data) ? data : []);
     } catch (e) {
       onMsg(`❌ No se pudieron cargar pedidos: ${e.message || "error"}`);
@@ -451,13 +561,28 @@ function OrdersSectionGrouped({ token, onMsg }) {
       setBusy(false);
     }
   }
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, []);
 
+  // Agrupar pedidos (aplicando filtro por código si hay búsqueda)
   const groups = useMemo(() => {
+    const term = searchCode.trim().toLowerCase();
+
+    const src =
+      term === ""
+        ? orders
+        : orders.filter((o) =>
+            String(o.code || o._id || "")
+              .toLowerCase()
+              .includes(term)
+          );
+
     const map = new Map();
-    for (const o of orders) {
+    for (const o of src) {
       const d = o.delivery || {};
-      const name  = (d.nombre   || "").trim();
+      const name = (d.nombre || "").trim();
       const phone = (d.telefono || "").trim();
       const key = `${name}|${phone}`;
       if (!map.has(key)) map.set(key, []);
@@ -473,7 +598,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
       );
       return { key, nombre, telefono, items: arr, total };
     });
-  }, [orders]);
+  }, [orders, searchCode]);
 
   async function changeStatus(order, next) {
     const id = order._id;
@@ -482,7 +607,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
 
     setSavingId(id);
     setOrders((lst) =>
-      lst.map(o => o._id === id ? { ...o, status: next, estado: next } : o)
+      lst.map((o) => (o._id === id ? { ...o, status: next, estado: next } : o))
     );
 
     try {
@@ -490,7 +615,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
       onMsg("✅ Estado actualizado.");
     } catch (e) {
       setOrders((lst) =>
-        lst.map(o => o._id === id ? { ...o, status: prev, estado: prev } : o)
+        lst.map((o) => (o._id === id ? { ...o, status: prev, estado: prev } : o))
       );
       onMsg(`❌ No se pudo actualizar estado: ${e.message || "error"}`);
     } finally {
@@ -504,7 +629,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
 
   async function openDetail(o) {
     try {
-      const full = await apix.adminOrderDetail(token, o._id); 
+      const full = await apix.adminOrderDetail(token, o._id);
       setDetailOrder(full);
       setDetailOpen(true);
     } catch (e) {
@@ -515,92 +640,155 @@ function OrdersSectionGrouped({ token, onMsg }) {
   return (
     <>
       <div className="card" style={{ padding: 12 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
           <strong>Pedidos</strong>
-          <button className="btn btn-outline-secondary" onClick={load} disabled={busy}>
-            Recargar
-          </button>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              value={searchCode}
+              onChange={(e) => setSearchCode(e.target.value)}
+              placeholder="Buscar por código…"
+              style={{
+                padding: "6px 10px",
+                borderRadius: 9999,
+                border: "1px solid var(--border)",
+                minWidth: 220,
+              }}
+            />
+            <button
+              className="btn btn-outline-secondary"
+              onClick={load}
+              disabled={busy}
+            >
+              Recargar
+            </button>
+          </div>
         </div>
 
-        {busy && <p className="hint" style={{ marginTop: 8 }}>Cargando…</p>}
+        {busy && (
+          <p className="hint" style={{ marginTop: 8 }}>
+            Cargando…
+          </p>
+        )}
         {!busy && groups.length === 0 && (
-          <p className="hint" style={{ marginTop: 8 }}>Sin pedidos</p>
+          <p className="hint" style={{ marginTop: 8 }}>
+            Sin pedidos
+          </p>
         )}
 
-        {!busy && groups.map(g => (
-          <div key={g.key} className="card" style={{ marginTop: 12, padding: 12 }}>
-            <div
-              style={{ display: "flex", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
-              onClick={() => toggleGroup(g.key)}
-            >
-              <div>
-                {(() => {
-                  const title = (g.nombre && g.nombre.trim()) || (g.telefono && g.telefono.trim()) || "Órdenes";
-                  return (
-                    <>
-                      <strong>{title}</strong>
-                      {g.telefono && title !== g.telefono && <span className="hint"> • {g.telefono}</span>}
-                    </>
-                  );
-                })()}
+        {!busy &&
+          groups.map((g) => (
+            <div key={g.key} className="card" style={{ marginTop: 12, padding: 12 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  cursor: "pointer",
+                }}
+                onClick={() => toggleGroup(g.key)}
+              >
+                <div>
+                  {(() => {
+                    const title =
+                      (g.nombre && g.nombre.trim()) ||
+                      (g.telefono && g.telefono.trim()) ||
+                      "Órdenes";
+                    return (
+                      <>
+                        <strong>{title}</strong>
+                        {g.telefono && title !== g.telefono && (
+                          <span className="hint"> • {g.telefono}</span>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <span className="hint">{g.items.length} pedido(s)</span>
+                  <span className="hint">Total: {PEN.format(g.total)}</span>
+                  <span aria-hidden>▾</span>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-                <span className="hint">{g.items.length} pedido(s)</span>
-                <span className="hint">Total: {PEN.format(g.total)}</span>
-                <span aria-hidden>▾</span>
-              </div>
-            </div>
 
-            {openGroup[g.key] && (
-              <div className="receipt__tableWrap" style={{ marginTop: 10 }}>
-                <table className="receipt__table" style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
-                      <th align="left">Código</th>
-                      <th>Total</th>
-                      <th>Estado</th>
-                      <th>Fecha</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {g.items.map(o => {
-                      const created = toLocalDate(o.creadoAt ?? o.createdAt ?? Date.now());
-                      const st = normStatus(o);
-                      return (
-                        <tr key={o._id}>
-                          <td>{o.code || o._id}</td>
-                          <td align="center">{PEN.format(Number(o.total || 0))}</td>
-                          <td align="center" style={{ minWidth: 180 }}>
-                            <select
-                              value={st}
-                              onChange={(e) => changeStatus(o, e.target.value)}
-                              disabled={savingId === o._id}
-                              style={{ padding: "6px 8px", borderRadius: 8 }}
-                            >
-                              {STATUS_OPTIONS.map(s => (
-                                <option key={s.value} value={s.value}>{s.label}</option>
-                              ))}
-                            </select>
-                          </td>
-                          <td align="center">{created ? DT_LIMA.format(created) : "—"}</td>
-                          <td align="right">
-                            <button className="btn btn-outline-secondary" onClick={() => openDetail(o)}>
-                              Ver
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ))}
+              {openGroup[g.key] && (
+                <div className="receipt__tableWrap" style={{ marginTop: 10 }}>
+                  <table
+                    className="receipt__table"
+                    style={{ width: "100%", borderCollapse: "collapse" }}
+                  >
+                    <thead>
+                      <tr>
+                        <th align="left">Código</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                        <th>Fecha</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.items.map((o) => {
+                        const created = toLocalDate(
+                          o.creadoAt ?? o.createdAt ?? Date.now()
+                        );
+                        const st = normStatus(o);
+                        return (
+                          <tr key={o._id}>
+                            <td>{o.code || o._id}</td>
+                            <td align="center">
+                              {PEN.format(Number(o.total || 0))}
+                            </td>
+                            <td align="center" style={{ minWidth: 180 }}>
+                              <select
+                                value={st}
+                                onChange={(e) =>
+                                  changeStatus(o, e.target.value)
+                                }
+                                disabled={savingId === o._id}
+                                style={{ padding: "6px 8px", borderRadius: 8 }}
+                              >
+                                {STATUS_OPTIONS.map((s) => (
+                                  <option key={s.value} value={s.value}>
+                                    {s.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </td>
+                            <td align="center">
+                              {created ? DT_LIMA.format(created) : "—"}
+                            </td>
+                            <td align="right">
+                              <button
+                                className="btn btn-outline-secondary"
+                                onClick={() => openDetail(o)}
+                              >
+                                Ver
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          ))}
       </div>
 
-      <OrderDetailModal open={detailOpen} onClose={() => setDetailOpen(false)} order={detailOrder} />
+      <OrderDetailModal
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        order={detailOrder}
+      />
     </>
   );
 }
@@ -611,11 +799,17 @@ export default function Admin() {
   const nav = useNavigate();
 
   const [msg, setMsg] = useState("");
-  const [tab, setTab] = useState("productos"); 
+  const [tab, setTab] = useState("productos");
 
   useEffect(() => {
-    if (!isAuthenticated) { nav("/login"); return; }
-    if (user?.rol !== "admin") { nav("/"); return; }
+    if (!isAuthenticated) {
+      nav("/login");
+      return;
+    }
+    if (user?.rol !== "admin") {
+      nav("/");
+      return;
+    }
   }, [isAuthenticated, user?.rol, nav]);
 
   function onMsg(m) {
@@ -624,19 +818,30 @@ export default function Admin() {
   }
 
   return (
-    <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>
+    <main
+      id="main"
+      style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}
+    >
       <h2 className="page-title">Panel de administración</h2>
-      {msg && <p className="pmodal__msg" role="status">{msg}</p>}
+      {msg && (
+        <p className="pmodal__msg" role="status">
+          {msg}
+        </p>
+      )}
 
       <div className="tabs" style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <button
-          className={`btn ${tab === "productos" ? "btn-primary" : "btn-outline-secondary"}`}
+          className={`btn ${
+            tab === "productos" ? "btn-primary" : "btn-outline-secondary"
+          }`}
           onClick={() => setTab("productos")}
         >
           Productos
         </button>
         <button
-          className={`btn ${tab === "pedidos" ? "btn-primary" : "btn-outline-secondary"}`}
+          className={`btn ${
+            tab === "pedidos" ? "btn-primary" : "btn-outline-secondary"
+          }`}
           onClick={() => setTab("pedidos")}
         >
           Pedidos
@@ -644,7 +849,7 @@ export default function Admin() {
       </div>
 
       {tab === "productos" && <ProductsSection token={token} onMsg={onMsg} />}
-      {tab === "pedidos"   && <OrdersSectionGrouped token={token} onMsg={onMsg} />}
+      {tab === "pedidos" && <OrdersSectionGrouped token={token} onMsg={onMsg} />}
     </main>
   );
 }
