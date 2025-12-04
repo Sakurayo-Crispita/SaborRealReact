@@ -47,6 +47,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
 
   const [preview, setPreview] = useState(initial?.imagenUrl || "");
   const [pickedFile, setPickedFile] = useState(null);
+  const [removedImg, setRemovedImg] = useState(false);   // ⬅️ NUEVO
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -61,6 +62,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       });
       setPreview(initial?.imagenUrl || "");
       setPickedFile(null);
+      setRemovedImg(false); // ⬅️ al abrir, asumimos que no se ha quitado la imagen
       setErr("");
     }
   }, [open, initial]);
@@ -81,6 +83,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
     const dataUrl = await compressImage(file, 720, 0.82);
     setPickedFile(file);
     setPreview(dataUrl);
+    setRemovedImg(false); // ⬅️ hay nueva imagen
   }
 
   async function submit(e) {
@@ -90,6 +93,15 @@ function ProductModal({ open, onClose, initial, onSave }) {
     if (!nombre) return setErr("El nombre es obligatorio.");
     if (!Number.isFinite(precio) || precio < 0) return setErr("Precio inválido.");
 
+    // 👇 Lógica de imagen
+    let imagenUrlField;
+    if (removedImg) {
+      // el usuario hizo "Quitar"
+      imagenUrlField = null;
+    } else if (preview) {
+      imagenUrlField = preview;
+    }
+
     const payload = {
       ...(form._id ? { _id: form._id } : {}),
       nombre,
@@ -97,8 +109,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       precio,
       categoria: form.categoria?.trim() || null,
       disponible: !!form.disponible,
-      ...(preview && preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
-      ...(!pickedFile && preview && !preview.startsWith("data:image/") ? { imagenUrl: preview } : {}),
+      ...(imagenUrlField !== undefined ? { imagenUrl: imagenUrlField } : {}),
     };
 
     await onSave(payload);
@@ -136,6 +147,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
                 onClick={() => {
                   setPreview("");
                   setPickedFile(null);
+                  setRemovedImg(true);
                 }}
               >
                 Quitar
