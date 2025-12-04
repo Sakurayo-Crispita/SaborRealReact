@@ -7,8 +7,8 @@ export default function Login() {
   const { login, register, isAuthenticated } = useAuth();
   const [mode, setMode] = useState('login');
   const [form, setForm] = useState({
-    email: 'demo@saborreal.com',
-    password: 'demo123',
+    email: '',
+    password: '',
     nombre: '',
     telefono: '',
     direccion: '',
@@ -54,7 +54,24 @@ export default function Login() {
       // redirige al destino original (si lo hubo) o al catálogo
       nav(from, { replace: true });
     } catch (err) {
-      setError(err?.message || 'Error');
+      let msg = err?.message || 'Ocurrió un error';
+
+      // Si el backend envía algo como {"detail":"..."}
+      if (msg.startsWith('{"detail"')) {
+        try {
+          const parsed = JSON.parse(msg);
+          if (parsed.detail) msg = parsed.detail;
+        } catch {
+          // ignore JSON parse error
+        }
+      }
+
+      // Personalizar mensaje de credenciales
+      if (msg.includes('Credenciales inválidas')) {
+        msg = 'Correo o contraseña incorrectos. Inténtalo de nuevo.';
+      }
+
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -62,10 +79,16 @@ export default function Login() {
 
   return (
     <main style={{ maxWidth: 520, margin: '2rem auto', padding: '0 1rem' }}>
-      <h2 style={{ marginBottom: 12 }}>{mode === 'login' ? 'Iniciar sesión' : 'Registrar'}</h2>
+      <h2 style={{ marginBottom: 12 }}>
+        {mode === 'login' ? 'Iniciar sesión' : 'Registrar'}
+      </h2>
       {isAuthenticated && <p className="hint">Ya estás autenticado.</p>}
 
-      <form onSubmit={onSubmit} className="card" style={{ padding: 16, display: 'grid', gap: 10 }}>
+      <form
+        onSubmit={onSubmit}
+        className="card"
+        style={{ padding: 16, display: 'grid', gap: 10 }}
+      >
         {error && <div className="form-error">{error}</div>}
 
         <div>
@@ -116,7 +139,7 @@ export default function Login() {
                 name="telefono"
                 type="tel"
                 inputMode="numeric"
-                pattern="[0-9+\- ]{6,}"
+                pattern="[0-9+\\- ]{6,}"
                 value={form.telefono}
                 onChange={onChange}
                 placeholder="+51 999 999 999"
@@ -139,11 +162,14 @@ export default function Login() {
         )}
 
         <button type="submit" disabled={busy}>
-          {busy ? 'Procesando…' : (mode === 'login' ? 'Entrar' : 'Crear cuenta')}
+          {busy ? 'Procesando…' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
         </button>
       </form>
 
-      <button style={{ marginTop: 12 }} onClick={() => setMode(mode === 'login' ? 'register' : 'login')}>
+      <button
+        style={{ marginTop: 12 }}
+        onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+      >
         Cambiar a {mode === 'login' ? 'registro' : 'login'}
       </button>
 
