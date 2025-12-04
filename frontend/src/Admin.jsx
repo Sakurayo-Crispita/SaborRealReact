@@ -112,13 +112,19 @@ function ProductModal({ open, onClose, initial, onSave }) {
         <div className="pmodal__header">
           <div className="pmodal__brandPh">SR</div>
           <h3 className="pmodal__title">{isEdit ? "Editar producto" : "Nuevo producto"}</h3>
-          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">×</button>
+          <button className="pmodal__close" onClick={onClose} aria-label="Cerrar">
+            ×
+          </button>
         </div>
 
         <div className="pmodal__body">
           <div className="pmodal__avatarBox" style={{ marginBottom: 12 }}>
             <div className="pmodal__avatar" style={{ width: 96, height: 64, borderRadius: 10 }}>
-              {preview ? <img src={preview} alt="Previsualización" /> : <div className="pmodal__avatarPh">🖼️</div>}
+              {preview ? (
+                <img src={preview} alt="Previsualización" />
+              ) : (
+                <div className="pmodal__avatarPh">🖼️</div>
+              )}
             </div>
             <label className="btn btn-outline-secondary btn-sm">
               Subir imagen
@@ -566,6 +572,20 @@ function OrdersSectionGrouped({ token, onMsg }) {
     // eslint-disable-next-line
   }, []);
 
+  // Resumen: total de pedidos y monto SOLO de los que NO están cancelados
+  const summary = useMemo(() => {
+    let totalActive = 0;
+    for (const o of orders) {
+      if (normStatus(o) !== "CANCELLED") {
+        totalActive += Number(o.total || 0);
+      }
+    }
+    return {
+      count: orders.length,
+      totalActive,
+    };
+  }, [orders]);
+
   // Agrupar pedidos (aplicando filtro por código si hay búsqueda)
   const groups = useMemo(() => {
     const term = searchCode.trim().toLowerCase();
@@ -606,6 +626,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
     if (next === prev) return;
 
     setSavingId(id);
+    // actualiza en memoria para que summary se recalcule
     setOrders((lst) =>
       lst.map((o) => (o._id === id ? { ...o, status: next, estado: next } : o))
     );
@@ -614,6 +635,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
       await apix.adminUpdateOrderStatus(token, id, next);
       onMsg("✅ Estado actualizado.");
     } catch (e) {
+      // revertir si falla
       setOrders((lst) =>
         lst.map((o) => (o._id === id ? { ...o, status: prev, estado: prev } : o))
       );
@@ -663,11 +685,10 @@ function OrdersSectionGrouped({ token, onMsg }) {
                 minWidth: 220,
               }}
             />
-            <button
-              className="btn btn-outline-secondary"
-              onClick={load}
-              disabled={busy}
-            >
+            <span className="hint">
+              {summary.count} pedido(s) • Total: {PEN.format(summary.totalActive)}
+            </span>
+            <button className="btn btn-outline-secondary" onClick={load} disabled={busy}>
               Recargar
             </button>
           </div>

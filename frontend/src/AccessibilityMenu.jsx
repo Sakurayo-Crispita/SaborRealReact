@@ -47,7 +47,7 @@ export default function AccessibilityMenu() {
         onClick={() => setOpen(o => !o)}
         title="Accesibilidad"
       >
-        <span className="a11y-fab__icon" aria-hidden="true">♿</span>
+        <span className="a11y-fab__icon" aria-hidden="true">👁️</span>
       </button>
 
       {open && (
