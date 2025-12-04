@@ -47,7 +47,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
 
   const [preview, setPreview] = useState(initial?.imagenUrl || "");
   const [pickedFile, setPickedFile] = useState(null);
-  const [removedImg, setRemovedImg] = useState(false);   // ⬅️ NUEVO
+  const [removedImg, setRemovedImg] = useState(false); // para saber si se quitó la imagen
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -62,7 +62,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       });
       setPreview(initial?.imagenUrl || "");
       setPickedFile(null);
-      setRemovedImg(false); 
+      setRemovedImg(false);
       setErr("");
     }
   }, [open, initial]);
@@ -83,7 +83,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
     const dataUrl = await compressImage(file, 720, 0.82);
     setPickedFile(file);
     setPreview(dataUrl);
-    setRemovedImg(false); // ⬅️ hay nueva imagen
+    setRemovedImg(false);
   }
 
   async function submit(e) {
@@ -93,10 +93,9 @@ function ProductModal({ open, onClose, initial, onSave }) {
     if (!nombre) return setErr("El nombre es obligatorio.");
     if (!Number.isFinite(precio) || precio < 0) return setErr("Precio inválido.");
 
-    // 👇 Lógica de imagen
+    // Lógica de imagen: si la quitó, mandamos null; si hay preview, la mandamos
     let imagenUrlField;
     if (removedImg) {
-      // el usuario hizo "Quitar"
       imagenUrlField = null;
     } else if (preview) {
       imagenUrlField = preview;
@@ -541,7 +540,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
   const [openGroup, setOpenGroup] = useState({});
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailOrder, setDetailOrder] = useState(null);
-  const [searchCode, setSearchCode] = useState(""); // 🔍 búsqueda por código
+  const [searchCode, setSearchCode] = useState("");
 
   const PEN = useMemo(
     () => new Intl.NumberFormat("es-PE", { style: "currency", currency: "PEN" }),
@@ -620,14 +619,22 @@ function OrdersSectionGrouped({ token, onMsg }) {
       if (!map.has(key)) map.set(key, []);
       map.get(key).push(o);
     }
+
     return Array.from(map.entries()).map(([key, arr]) => {
       const [nombre, telefono] = key.split("|");
-      const total = arr.reduce((s, x) => s + Number(x.total || 0), 0);
+
+      // Total del grupo solo con pedidos NO cancelados
+      const total = arr.reduce((s, x) => {
+        return normStatus(x) === "CANCELLED" ? s : s + Number(x.total || 0);
+      }, 0);
+
+      // Ordenar pedidos por fecha desc
       arr.sort(
         (a, b) =>
           toLocalDate(b.creadoAt ?? b.createdAt)?.getTime() -
           toLocalDate(a.creadoAt ?? a.createdAt)?.getTime()
       );
+
       return { key, nombre, telefono, items: arr, total };
     });
   }, [orders, searchCode]);
@@ -638,7 +645,7 @@ function OrdersSectionGrouped({ token, onMsg }) {
     if (next === prev) return;
 
     setSavingId(id);
-    // actualiza en memoria para que summary se recalcule
+    // actualiza en memoria para que summary y groups se recalculen
     setOrders((lst) =>
       lst.map((o) => (o._id === id ? { ...o, status: next, estado: next } : o))
     );
@@ -851,10 +858,7 @@ export default function Admin() {
   }
 
   return (
-    <main
-      id="main"
-      style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}
-    >
+    <main id="main" style={{ maxWidth: 980, margin: "2rem auto", padding: "0 1rem" }}>
       <h2 className="page-title">Panel de administración</h2>
       {msg && (
         <p className="pmodal__msg" role="status">
