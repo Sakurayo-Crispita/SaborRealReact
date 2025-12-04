@@ -62,7 +62,7 @@ function ProductModal({ open, onClose, initial, onSave }) {
       });
       setPreview(initial?.imagenUrl || "");
       setPickedFile(null);
-      setRemovedImg(false); // ⬅️ al abrir, asumimos que no se ha quitado la imagen
+      setRemovedImg(false); 
       setErr("");
     }
   }, [open, initial]);
