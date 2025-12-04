@@ -63,9 +63,9 @@ export default function Catalogo() {
       style={{
         maxWidth: 1080,
         margin: '2rem auto',
-        padding: '0 1rem',
+        padding: '0 1rem 3rem',
         fontFamily: 'system-ui',
-        color: '#eee',
+        color: '#eee'
       }}
     >
       <h1 style={{ margin: '0 0 12px' }}>Sabor Real — Catálogo</h1>

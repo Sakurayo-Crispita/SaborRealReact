@@ -96,23 +96,51 @@ export default function ProductoCard({ p }) {
     <article className="card">
       <div className="thumb" aria-label={`Imagen de ${nombre}`}>
         {p.imagenUrl ? (
-          <img src={p.imagenUrl} alt={nombre} loading="lazy" decoding="async" width="800" height="500" />
+          <img
+            src={p.imagenUrl}
+            alt={nombre}
+            loading="lazy"
+            decoding="async"
+            width="800"
+            height="500"
+          />
         ) : (
           <span className="noimg">Sin imagen</span>
         )}
       </div>
 
       <div style={{ padding: '14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
           <h3 style={{ margin: '6px 0' }}>{nombre}</h3>
           {p.categoria && <span className="badge">{p.categoria}</span>}
         </div>
 
-        <p className="hint" style={{ margin: '6px 0 10px' }}>{p.descripcion ?? '—'}</p>
+        <p className="hint" style={{ margin: '6px 0 10px' }}>
+          {p.descripcion ?? '—'}
+        </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            marginBottom: 10,
+          }}
+        >
           <div className="price">{PEN.format(precio)}</div>
-          <button className="btn btn-primary" onClick={handleAdd} disabled={busyAdd} aria-label={`Añadir ${nombre} al ticket`}>
+          <button
+            className="btn btn-primary"
+            onClick={handleAdd}
+            disabled={busyAdd}
+            aria-label={`Añadir ${nombre} al ticket`}
+          >
             {busyAdd ? 'Añadiendo…' : 'Añadir al ticket'}
           </button>
         </div>
@@ -128,10 +156,13 @@ export default function ProductoCard({ p }) {
             <ul style={{ paddingLeft: 18, margin: 0 }}>
               {comentarios.map((c) => {
                 const stars = Number(c.rating ?? c.puntuacion ?? 0) || 0;
-                const text = c.texto ?? c.text ?? "";
+                const text = c.texto ?? c.text ?? '';
                 return (
                   <li key={c._id || `${text}-${stars}`}>
-                    <strong aria-label={`${stars} estrellas`}>{'★'.repeat(stars)}</strong>{' '}— {text}
+                    <strong aria-label={`${stars} estrellas`}>
+                      {'★'.repeat(stars)}
+                    </strong>{' '}
+                    — {text}
                   </li>
                 );
               })}
@@ -140,8 +171,13 @@ export default function ProductoCard({ p }) {
         </section>
 
         {token ? (
-          <form onSubmit={enviarComentario} style={{ marginTop: 12, display: 'grid', gap: 8 }}>
-            <small className="hint">Comentando como <b>{email}</b></small>
+          <form
+            onSubmit={enviarComentario}
+            style={{ marginTop: 12, display: 'grid', gap: 8 }}
+          >
+            <small className="hint">
+              Comentando como <b>{email}</b>
+            </small>
 
             <div className="form__grp">
               <label htmlFor={idText}>Escribe tu opinión (máx. 200)</label>
@@ -150,14 +186,25 @@ export default function ProductoCard({ p }) {
                 rows={3}
                 maxLength={200}
                 value={texto}
-                onChange={e => setTexto(e.target.value)}
+                onChange={(e) => setTexto(e.target.value)}
                 placeholder="Me gustó porque…"
+                style={{
+                  width: '100%',
+                  minHeight: '90px',
+                  maxHeight: '120px',
+                  resize: 'none',      // 👈 no se puede estirar
+                  overflowY: 'auto',   // 👈 si hay mucho texto, scroll interno
+                }}
               />
             </div>
 
             <div className="form__grp">
               <label htmlFor={idRating}>Puntuación</label>
-              <select id={idRating} value={rating} onChange={e => setRating(clampStar(e.target.value))}>
+              <select
+                id={idRating}
+                value={rating}
+                onChange={(e) => setRating(clampStar(e.target.value))}
+              >
                 <option value={5}>5 — Excelente</option>
                 <option value={4}>4 — Muy bueno</option>
                 <option value={3}>3 — Bueno</option>
@@ -175,7 +222,12 @@ export default function ProductoCard({ p }) {
         )}
 
         {msg && (
-          <div className="pmodal__msg" role="status" aria-live="polite" style={{ marginTop: 8 }}>
+          <div
+            className="pmodal__msg"
+            role="status"
+            aria-live="polite"
+            style={{ marginTop: 8 }}
+          >
             {msg}
           </div>
         )}
