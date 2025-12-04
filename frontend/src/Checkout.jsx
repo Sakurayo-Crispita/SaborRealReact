@@ -99,9 +99,12 @@ export default function Checkout() {
     }
   }
 
-  // Acciones del gate
-  const goLogin = () => nav("/login", { state: { from: loc } });
-  const goRegister = () => nav("/login?mode=register", { state: { from: loc } });
+  // Acciones del gate (AHORA con mode para que Login abra con la vista correcta)
+  const goLogin = () =>
+    nav("/login", { state: { from: loc, mode: "login" } });
+
+  const goRegister = () =>
+    nav("/login", { state: { from: loc, mode: "register" } });
 
   return (
     <>
