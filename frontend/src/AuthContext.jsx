@@ -41,25 +41,95 @@ export function AuthProvider({ children }) {
     return () => { alive = false; };
   }, [token]);
 
+  // ========= LOGIN =========
   async function login(email, password) {
-    const data = await apix.login(email, password);
-    const rawToken = data.access_token;
-    setToken(rawToken);
-    localStorage.setItem('sr_token', rawToken);
-
     try {
-      const me = await apix.me(rawToken);
-      setUser(me);
-      localStorage.setItem('sr_user', JSON.stringify(me));
-    } catch {
+      const data = await apix.login(email, password);
+      const rawToken = data.access_token;
+
+      setToken(rawToken);
+      localStorage.setItem('sr_token', rawToken);
+
+      try {
+        const me = await apix.me(rawToken);
+        setUser(me);
+        localStorage.setItem('sr_user', JSON.stringify(me));
+      } catch {
+        setUser(null);
+        localStorage.removeItem('sr_user');
+      }
+    } catch (err) {
+      // Normalizar mensaje de error
+      let detail =
+        err?.response?.data?.detail ?? // axios-style
+        err?.detail ??
+        err?.message ??
+        'No se pudo iniciar sesión.';
+
+      // Si viene un JSON como string: {"detail":"..."}
+      if (typeof detail === 'string' && detail.startsWith('{"detail"')) {
+        try {
+          const parsed = JSON.parse(detail);
+          if (parsed.detail) detail = parsed.detail;
+        } catch {
+          // ignore parse error
+        }
+      }
+
+      if (typeof detail === 'string') {
+        // Personalizar caso de credenciales inválidas
+        if (detail.toLowerCase().includes('credenciales inválidas') ||
+            detail.toLowerCase().includes('invalid credentials')) {
+          detail = 'Correo o contraseña incorrectos. Inténtalo de nuevo.';
+        }
+      }
+
+      // Asegurarse de no dejar basura en localStorage
+      setToken(null);
       setUser(null);
+      localStorage.removeItem('sr_token');
       localStorage.removeItem('sr_user');
+
+      throw new Error(
+        typeof detail === 'string'
+          ? detail
+          : 'No se pudo iniciar sesión. Inténtalo de nuevo.'
+      );
     }
   }
 
+  // ========= REGISTER =========
   async function register(payload) {
-    await apix.register(payload);
-    await login(payload.email, payload.password);
+    try {
+      await apix.register(payload);
+      await login(payload.email, payload.password);
+    } catch (err) {
+      let detail =
+        err?.response?.data?.detail ??
+        err?.detail ??
+        err?.message ??
+        'No se pudo registrar el usuario.';
+
+      if (typeof detail === 'string' && detail.startsWith('{"detail"')) {
+        try {
+          const parsed = JSON.parse(detail);
+          if (parsed.detail) detail = parsed.detail;
+        } catch {}
+      }
+
+      // Ejemplo: si el backend dice que el correo ya existe
+      if (typeof detail === 'string' &&
+          (detail.toLowerCase().includes('ya existe') ||
+           detail.toLowerCase().includes('already exists'))) {
+        detail = 'Ya existe una cuenta con este correo.';
+      }
+
+      throw new Error(
+        typeof detail === 'string'
+          ? detail
+          : 'No se pudo registrar el usuario.'
+      );
+    }
   }
 
   function logout() {
@@ -97,7 +167,9 @@ export function AuthProvider({ children }) {
   const isAdmin = (user?.rol === 'admin') || (user?.role === 'admin');
   const hasRole = (...roles) => {
     const current = user?.rol || user?.role || 'customer';
-    return roles.map(String).some(r => String(r).toLowerCase() === String(current).toLowerCase());
+    return roles
+      .map(String)
+      .some(r => String(r).toLowerCase() === String(current).toLowerCase());
   };
 
   const value = useMemo(
@@ -106,10 +178,12 @@ export function AuthProvider({ children }) {
       user,
       email: user?.email || null,
       isAuthenticated: Boolean(token),
-      isAdmin,                // <-- NUEVO
-      hasRole,               // <-- NUEVO
+      isAdmin,
+      hasRole,
       authHeader: token ? `Bearer ${token}` : null,
-      login, register, logout,
+      login,
+      register,
+      logout,
       // perfil
       profile: user,
       setProfile,

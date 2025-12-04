@@ -37,7 +37,9 @@ export default function Login() {
     setBusy(true);
     try {
       if (mode === 'login') {
-        if (!form.email || !form.password) throw new Error('Completa email y contraseña');
+        if (!form.email || !form.password) {
+          throw new Error('Completa email y contraseña');
+        }
         await login(form.email, form.password);
       } else {
         if (!form.email || !form.password || !form.nombre) {
@@ -56,8 +58,7 @@ export default function Login() {
     } catch (err) {
       let msg = err?.message || 'Ocurrió un error';
 
-      // Si el backend envía algo como {"detail":"..."}
-      if (msg.startsWith('{"detail"')) {
+      if (typeof msg === 'string' && msg.startsWith('{"detail"')) {
         try {
           const parsed = JSON.parse(msg);
           if (parsed.detail) msg = parsed.detail;
@@ -66,8 +67,7 @@ export default function Login() {
         }
       }
 
-      // Personalizar mensaje de credenciales
-      if (msg.includes('Credenciales inválidas')) {
+      if (typeof msg === 'string' && msg.includes('Credenciales inválidas')) {
         msg = 'Correo o contraseña incorrectos. Inténtalo de nuevo.';
       }
 
@@ -75,6 +75,16 @@ export default function Login() {
     } finally {
       setBusy(false);
     }
+  }
+
+  function switchMode() {
+    setMode(m => (m === 'login' ? 'register' : 'login'));
+    // limpiar error y contraseña al cambiar
+    setError(null);
+    setForm(f => ({
+      ...f,
+      password: '',
+    }));
   }
 
   return (
@@ -168,7 +178,7 @@ export default function Login() {
 
       <button
         style={{ marginTop: 12 }}
-        onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+        onClick={switchMode}
       >
         Cambiar a {mode === 'login' ? 'registro' : 'login'}
       </button>
